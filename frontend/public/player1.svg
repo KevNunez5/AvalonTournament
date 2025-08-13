@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="40">
+    <image x="0" y="7" width="30" href="/hoplite_2155545.png"/>
+    <circle cx="26" cy="26" r="10" fill="#cc0000"/>
+    <text x="21" y="31" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="16" fill="white">1</text>
+</svg>
