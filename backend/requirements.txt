@@ -1,3 +1,4 @@
 tornado
 jsonpickle
 websockets
+requests
