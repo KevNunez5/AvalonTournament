@@ -86,6 +86,8 @@ export default function VizAvalon({
                 >
                   <title>{`player: ${vote?.player} | raw: ${String(raw)}`}</title>
                 </rect>
+
+                {/* Hacer que las votacions tengan simbolos de Y/N
                 <text
                   x={x + voteRectSize / 2}
                   y={y + voteRectSize / 2 + 4}
@@ -95,6 +97,9 @@ export default function VizAvalon({
                 >
                   {isYes ? "Y" : "N"}
                 </text>
+
+                */}
+
               </g>
             );
           })
