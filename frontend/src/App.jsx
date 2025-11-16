@@ -24,11 +24,15 @@ export default function App() {
   const [role, setRole] = useState("");
   const [vote, setVote] = useState(null);
 
+  // toggles específicos de VizAvalon
+  const [showVotesViz, setShowVotesViz] = useState(true);
+  const [showQuestsViz, setShowQuestsViz] = useState(true);
+
+
   const [messages, setMessages] = useState([]); // [{message, index, action?}]
   const wspRef = useRef(null);
   const gameState = useRef({ index: undefined, role: undefined, stage: undefined });
 
-  // ✅ NUEVO: toggle para mostrar / ocultar visualizaciones
   const [showAnalytics, setShowAnalytics] = useState(true);
 
   // ===== Helpers para parsing de mensajes a "history" (Viz-ready) =====
@@ -241,27 +245,40 @@ export default function App() {
           <Button onClick={createNewGame}>New game</Button>
         </Card>
 
-        <Card columnStart="3" columnEnd="-1">
+                <Card columnStart="3" columnEnd="-1">
           <Flex direction="row" gap="small" alignItems="center">
             <Input placeholder="Game Id" />
             <Button onClick={joinGame}>Join</Button>
 
-            {/* ✅ Botón para mostrar / ocultar analíticas */}
+            {/* Botón: mostrar/ocultar matriz de votos */}
             <Button
               variation="link"
-              onClick={() => setShowAnalytics((prev) => !prev)}
+              onClick={() => setShowVotesViz((prev) => !prev)}
             >
-              {showAnalytics ? "Hide analytics" : "Show analytics"}
+              {showVotesViz ? "Hide votes grid" : "Show votes grid"}
+            </Button>
+
+            {/* Botón: mostrar/ocultar panel de quests */}
+            <Button
+              variation="link"
+              onClick={() => setShowQuestsViz((prev) => !prev)}
+            >
+              {showQuestsViz ? "Hide quests panel" : "Show quests panel"}
             </Button>
           </Flex>
         </Card>
 
+
         {/* fila 2: arriba-izquierda => VizAvalon */}
-        <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
-          {showAnalytics && (
-            <VizAvalon history={history} numPlayers={5} />
-          )}
+          <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
+          <VizAvalon
+            history={history}
+            numPlayers={5}
+            showVotes={showVotesViz}
+            showQuests={showQuestsViz}
+          />
         </Card>
+
 
         {/* fila 2: arriba-derecha => role */}
         <Card columnStart="3" columnEnd="-1" rowStart="2" rowEnd="3">
