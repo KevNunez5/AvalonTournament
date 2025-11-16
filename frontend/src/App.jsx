@@ -28,6 +28,9 @@ export default function App() {
   const wspRef = useRef(null);
   const gameState = useRef({ index: undefined, role: undefined, stage: undefined });
 
+  // ✅ NUEVO: toggle para mostrar / ocultar visualizaciones
+  const [showAnalytics, setShowAnalytics] = useState(true);
+
   // ===== Helpers para parsing de mensajes a "history" (Viz-ready) =====
   const history = useMemo(() => {
     // Construye intentos/rondas a partir de los textos que emite el server/bots
@@ -137,7 +140,10 @@ export default function App() {
           stage: STAGE.REVEAL,
         };
         setRole(gameState.current.role);
-        setMessages((prev) => [...prev, { message: `I am Player ${gameState.current.index}, with role '${gameState.current.role}'`, index: -1 }]);
+        setMessages((prev) => [
+          ...prev,
+          { message: `I am Player ${gameState.current.index}, with role '${gameState.current.role}'`, index: -1 }
+        ]);
         return;
       }
       if (msg.action === "VoteTeam") {
@@ -228,22 +234,33 @@ export default function App() {
 
   return (
     <ThemeProvider>
-       {/* theme={theme} colorMode="dark"> */}
+      {/* theme={theme} colorMode="dark"> */}
       <Grid templateColumns="1fr 1fr 1fr 1fr" templateRows="auto auto 1fr">
         {/* fila 1: controles */}
         <Card columnStart="1" columnEnd="3">
           <Button onClick={createNewGame}>New game</Button>
         </Card>
+
         <Card columnStart="3" columnEnd="-1">
-          <Flex direction="row" gap="small">
+          <Flex direction="row" gap="small" alignItems="center">
             <Input placeholder="Game Id" />
             <Button onClick={joinGame}>Join</Button>
+
+            {/* ✅ Botón para mostrar / ocultar analíticas */}
+            <Button
+              variation="link"
+              onClick={() => setShowAnalytics((prev) => !prev)}
+            >
+              {showAnalytics ? "Hide analytics" : "Show analytics"}
+            </Button>
           </Flex>
         </Card>
 
         {/* fila 2: arriba-izquierda => VizAvalon */}
         <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
-          <VizAvalon history={history} numPlayers={5} />
+          {showAnalytics && (
+            <VizAvalon history={history} numPlayers={5} />
+          )}
         </Card>
 
         {/* fila 2: arriba-derecha => role */}
@@ -251,14 +268,15 @@ export default function App() {
           <Text>Role: {role}</Text>
         </Card>
 
-        {/* fila 3: abajo-izquierda => QuestBoard (nuevo) */}
+        {/* fila 3: abajo-izquierda => QuestBoard */}
         <Card columnStart="1" columnEnd="3" rowStart="3" rowEnd="-1">
-          <QuestBoard
-            numPlayers={5}
-            // setup típico 5 jugadores: 2-3-2-3-3
-            questSetup={[2, 3, 2, 3, 3]}
-            // cuando lo conectemos: history={history}
-          />
+          {showAnalytics && (
+            <QuestBoard
+              numPlayers={5}
+              questSetup={[2, 3, 2, 3, 3]}
+              // en el siguiente paso: history={history}
+            />
+          )}
         </Card>
 
         {/* fila 3: abajo-derecha => chat */}
@@ -278,7 +296,6 @@ export default function App() {
           </div>
         </Card>
       </Grid>
-
     </ThemeProvider>
   );
 }
