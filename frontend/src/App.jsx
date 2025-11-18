@@ -21,6 +21,21 @@ const STAGE = {
 const theme = { name: "my-theme", overrides: [defaultDarkModeOverride] };
 
 export default function App() {
+
+  const [playerNames, setPlayerNames] = useState(
+    () => Array.from({ length: 10 }, (_, i) => `player-${i}`)
+  );
+
+  const handleRenamePlayer = (index, newName) => {
+    setPlayerNames(prev => {
+      const next = [...prev];
+      // si ponen vacío, volvemos al nombre por defecto
+      next[index] = newName && newName.trim() !== "" ? newName.trim() : `player-${index}`;
+      return next;
+    });
+  };
+
+
   const [role, setRole] = useState("");
   const [vote, setVote] = useState(null);
 
@@ -325,11 +340,45 @@ export default function App() {
         <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
           <VizAvalon
             history={history}
-            numPlayers={totalPlayers}   // <- aquí usamos humans + bots
+            numPlayers={numHumans + numBots}
+            playerNames={playerNames}
             showVotes={showVotesViz}
             showQuests={showQuestsViz}
           />
+
+          {/* Editor de nombres debajo de la visualización */}
+          <div style={{ marginTop: "8px" }}>
+            {Array.from({ length: numHumans + numBots }, (_, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  fontSize: "0.85rem",
+                }}
+              >
+                <span>{playerNames[i]}</span>
+                <Button
+                  size="small"
+                  variation="link"
+                  onClick={() => {
+                    const newName = window.prompt(
+                      `Nuevo nombre para player-${i}`,
+                      playerNames[i]
+                    );
+                    if (newName !== null) {
+                      handleRenamePlayer(i, newName);
+                    }
+                  }}
+                >
+                  Rename
+                </Button>
+              </div>
+            ))}
+          </div>
         </Card>
+
 
 
 
