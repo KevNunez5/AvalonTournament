@@ -25,8 +25,8 @@ export default function App() {
   const [vote, setVote] = useState(null);
 
   // toggles específicos de VizAvalon
-  const [showVotesViz, setShowVotesViz] = useState(true);
-  const [showQuestsViz, setShowQuestsViz] = useState(true);
+  const [showVotesViz, setShowVotesViz] = useState(false);
+  const [showQuestsViz, setShowQuestsViz] = useState(false);
 
 
   const [messages, setMessages] = useState([]); // [{message, index, action?}]
