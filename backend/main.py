@@ -3,24 +3,30 @@ import tornado.web
 import tornado.websocket
 import jsonpickle
 
-from avalon.roles import unassigned, good, evil, merlin
+import subprocess
+
+from avalon_old.roles import unassigned, good, evil, merlin
 from avalon.game_state import PublicGameState
-from avalon.game_simulator import get_roles, assign_roles
+from avalon_old.game_simulator import get_roles, assign_roles
 
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
 
 class GameController:
-    def __init__(self):
+    def __init__(self, nplayers, nbots):
         self.q = Queue(maxsize=2)
         self.players = list()
+        self.nplayers = nplayers
+        self.nbots = nbots
+        subprocess.Popen(["python3", "bots.py", str(nbots)])
+
     
     def add_player(self, channel):
         player_id = len(self.players)
         self.players.append(channel)
         print("Number of players so far:", f"{len(self.players)}")
         channel.write_message({"message": f"Welcome player {player_id - 1}", "index": -1})
-        if len(self.players) == 6:
+        if len(self.players) == self.nplayers + 1:
             self.q.put({"event": "AllPlayers"})
 
     def broadcast(self, msg, agent_index = -1):
@@ -189,8 +195,9 @@ class GamesHandler(tornado.web.RequestHandler):
         self.finish()
 
     async def post(self):
-        print("Creating a game instance")
-        controller = GameController()
+        body = jsonpickle.decode(self.request.body)
+        print("Creating a game instance", body)
+        controller = GameController(5,4)
         IOLoop.current().spawn_callback(controller.game_loop)
         self.application.add_handlers(
             r".*",  # match any host

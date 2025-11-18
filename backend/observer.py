@@ -4,7 +4,7 @@ import requests
 import jsonpickle
 
 async def avalon_observer(loop):
-    r = requests.post("http://localhost:8888/games")
+    r = requests.post("http://localhost:8888/games", data={"nplayers": 10, "nbots": 10})
 
     uri = "ws://localhost:8888/ws"
     try:

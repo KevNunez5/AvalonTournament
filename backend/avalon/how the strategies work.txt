@@ -1,0 +1,37 @@
+
+We define two strategies: 
+    - GoodStrategy, for the good players, and 
+    - EvilStrategy, for the evil players.
+
+Each strategy contains two main components:
+    - determining a team to propose.
+    - determining whether to vote in favor, or against a proposed team.
+    
+In addition, the EvilStrategy contains the following two components.   
+    - determining whether to accept or reject a quest.
+    - guessing who is Merlin.
+
+
+
+*** GoodStrategy: ***
+
+The idea of the GoodStrategy is that it keeps a list of 'hypotheses'. Each hypothesis is a possible assignment of roles to players.
+Initially, the player will have one hypothesis for each such possible assignment.
+However, as the game progresses, he will discard those hypotheses that are inconsistent with the events in the game.
+
+Each good player should not only keep hypotheses for himself, but also, for every other player, a list of hypotheses from the point of view of that player.
+This will allow the good player to detect if any player is taking an action that is inconsistent with his hypotheses, which would suggest that he is an evil player.
+
+
+
+*** EvilStrategy: ***
+
+The idea of the EvilStrategy is that, in general, it will do exactly the same as the GoodStrategy, because otherwise the other payers could recognize
+that the player is evil. Except:
+    - if a certain action leads to a direct victory for the evil players, then he will of course choose that action.
+    - if a certain action is needed to prevent a victory for the good players, then he will also choose that action.
+    - if the majority of 'good' players already know that he is an evil player.
+
+Furthermore, if the GoodStrategy is indifferent between several choices, then the evil player will choose the one that is most beneficial for him.
+
+

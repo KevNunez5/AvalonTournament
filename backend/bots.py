@@ -1,8 +1,9 @@
 import asyncio
 import websockets
 import jsonpickle
-from avalon.agent import Agent
-from avalon.utils import get_team_string
+from avalon_old.agent import Agent
+from avalon_old.utils import get_team_string
+import sys
 
 async def avalon_bot(loop: asyncio.AbstractEventLoop):
     uri = "ws://localhost:8888/ws"
@@ -89,8 +90,11 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
         loop.stop()
 
 if __name__ == "__main__":
+    if (len(sys.argv) != 2):
+        raise("You forgot to specify the number of bots")
+    nbots = int(sys.argv[1])
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    for i in range(4):
+    for i in range(nbots):
         asyncio.ensure_future(avalon_bot(loop))
     loop.run_forever()
