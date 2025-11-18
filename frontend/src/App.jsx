@@ -259,8 +259,11 @@ export default function App() {
   return (
     <ThemeProvider>
       {/* theme={theme} colorMode="dark"> */}
-      <Grid templateColumns="1fr 1fr 1fr 1fr" templateRows="auto auto 1fr">
-        {/* fila 1: controles */}
+      <Grid
+        templateColumns="1fr 1fr 1fr 1fr"
+        templateRows="auto 1fr"   // ⬅️ solo 2 filas: controles + contenido
+      >
+        {/* ===== Fila 1: controles ===== */}
         <Card columnStart="1" columnEnd="3">
           <Flex direction="row" gap="small" alignItems="center">
             <Button onClick={createNewGame}>New game</Button>
@@ -276,16 +279,12 @@ export default function App() {
               onChange={(e) => {
                 let h = Number(e.target.value);
                 if (isNaN(h)) return;
-
-                // Evitar que supere el total permitido
                 if (h + numBots > 10) {
                   h = 10 - numBots;
                 }
-
                 setNumHumans(h);
               }}
             />
-
 
             {/* Número de bots */}
             <Text>Bots:</Text>
@@ -298,24 +297,22 @@ export default function App() {
               onChange={(e) => {
                 let b = Number(e.target.value);
                 if (isNaN(b)) return;
-
-                // Evitar que supere el total permitido
                 if (b + numHumans > 10) {
                   b = 10 - numHumans;
                 }
-
                 setNumBots(b);
               }}
             />
-
           </Flex>
         </Card>
 
-
-                <Card columnStart="3" columnEnd="-1">
+        <Card columnStart="3" columnEnd="-1">
           <Flex direction="row" gap="small" alignItems="center">
             <Input placeholder="Game Id" />
             <Button onClick={joinGame}>Join</Button>
+
+            {/* Role visible aquí arriba */}
+            <Text>Role: {role}</Text>
 
             {/* Botón: mostrar/ocultar matriz de votos */}
             <Button
@@ -335,9 +332,9 @@ export default function App() {
           </Flex>
         </Card>
 
-
-        {/* fila 2: arriba-izquierda => VizAvalon */}
-        <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
+        {/* ===== Fila 2: contenido izquierda (Viz + renames + QuestBoard) ===== */}
+        <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="-1">
+          {/* VizAvalon */}
           <VizAvalon
             history={history}
             numPlayers={numHumans + numBots}
@@ -346,7 +343,7 @@ export default function App() {
             showQuests={showQuestsViz}
           />
 
-          {/* Editor de nombres debajo de la visualización */}
+          {/* Editor de nombres */}
           <div style={{ marginTop: "8px" }}>
             {Array.from({ length: numHumans + numBots }, (_, i) => (
               <div
@@ -377,39 +374,39 @@ export default function App() {
               </div>
             ))}
           </div>
-        </Card>
 
-
-
-
-        {/* fila 2: arriba-derecha => role */}
-        <Card columnStart="3" columnEnd="-1" rowStart="2" rowEnd="3">
-          <Text>Role: {role}</Text>
-        </Card>
-
-        {/* fila 3: abajo-izquierda => QuestBoard */}
-        <Card columnStart="1" columnEnd="3" rowStart="3" rowEnd="-1">
+          {/* QuestBoard debajo de la visualización */}
           {showAnalytics && (
-            <QuestBoard
-              numPlayers={5}
-              questSetup={[2, 3, 2, 3, 3]}
-              // en el siguiente paso: history={history}
-            />
+            <div style={{ marginTop: "24px" }}>
+              <QuestBoard
+                numPlayers={5}
+                questSetup={[2, 3, 2, 3, 3]}
+                // en el siguiente paso: history={history}
+              />
+            </div>
           )}
         </Card>
 
-        {/* fila 3: abajo-derecha => chat */}
-        <Card columnStart="3" columnEnd="-1" rowStart="3" rowEnd="-1">
+        {/* ===== Fila 2: contenido derecha (chat) ===== */}
+        <Card columnStart="3" columnEnd="-1" rowStart="2" rowEnd="-1">
           <div style={{ position: "relative", height: "550px" }}>
             <MainContainer>
               <ChatContainer>
                 <MessageList>
                   {messages.map((m, i) => (
-                    <MyMessage key={i} message={m.message} playerId={m.index} isNarrator={m.index === -1} />
+                    <MyMessage
+                      key={i}
+                      message={m.message}
+                      playerId={m.index}
+                      isNarrator={m.index === -1}
+                    />
                   ))}
                   {votingFormIfNeeded()}
                 </MessageList>
-                <MessageInput placeholder="Type message here" onSend={sendMessage} />
+                <MessageInput
+                  placeholder="Type message here"
+                  onSend={sendMessage}
+                />
               </ChatContainer>
             </MainContainer>
           </div>
