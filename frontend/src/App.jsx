@@ -24,6 +24,10 @@ export default function App() {
   const [role, setRole] = useState("");
   const [vote, setVote] = useState(null);
 
+  const [numHumans, setNumHumans] = useState(1);
+  const [numBots, setNumBots] = useState(4);
+
+
   // toggles específicos de VizAvalon
   const [showVotesViz, setShowVotesViz] = useState(false);
   const [showQuestsViz, setShowQuestsViz] = useState(false);
@@ -242,8 +246,55 @@ export default function App() {
       <Grid templateColumns="1fr 1fr 1fr 1fr" templateRows="auto auto 1fr">
         {/* fila 1: controles */}
         <Card columnStart="1" columnEnd="3">
-          <Button onClick={createNewGame}>New game</Button>
+          <Flex direction="row" gap="small" alignItems="center">
+            <Button onClick={createNewGame}>New game</Button>
+
+            {/* Número de jugadores humanos */}
+            <Text>Humans:</Text>
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              width="5rem"
+              value={numHumans}
+              onChange={(e) => {
+                let h = Number(e.target.value);
+                if (isNaN(h)) return;
+
+                // Evitar que supere el total permitido
+                if (h + numBots > 10) {
+                  h = 10 - numBots;
+                }
+
+                setNumHumans(h);
+              }}
+            />
+
+
+            {/* Número de bots */}
+            <Text>Bots:</Text>
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              width="5rem"
+              value={numBots}
+              onChange={(e) => {
+                let b = Number(e.target.value);
+                if (isNaN(b)) return;
+
+                // Evitar que supere el total permitido
+                if (b + numHumans > 10) {
+                  b = 10 - numHumans;
+                }
+
+                setNumBots(b);
+              }}
+            />
+
+          </Flex>
         </Card>
+
 
                 <Card columnStart="3" columnEnd="-1">
           <Flex direction="row" gap="small" alignItems="center">
