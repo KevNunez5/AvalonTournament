@@ -34,19 +34,27 @@ export default function VizAvalon({
   const getColor = (result) =>
     result === "succeeded" ? "green" : result === "failed" ? "red" : "lightgray";
 
-  // Dimensiones y offsets
+    // Dimensiones y offsets
   const leftLabelX = 50;
   const leftTopY = 15;
   const colXStart = 180;
   const voteRectSize = 20;
 
-  // Segunda lista de nombres (parte baja)
-  const lowerLabelsYStart = 200;
+  // Altura que ocupa la lista de nombres de arriba
+  const topNamesBottomY = leftTopY + numPlayers * rowHeight;
 
-  // Caja vertical que marca el bloque del equipo en cada ronda (en la lista inferior)
-  const teamBlockYOffset = 182;
-  const leaderMarkYOffset = 186;
-  const memberDotYCenterOffset = 194;
+  // Espacio entre la sección de arriba y la de abajo
+  const gapBetweenSections = 45;
+
+  // Segunda lista de nombres (parte baja), justo debajo de la de arriba
+  const lowerLabelsYStart = topNamesBottomY + gapBetweenSections;
+
+  // Offsets de la parte de quests, relativos a lowerLabelsYStart
+  // (valores ajustados para que se vean como antes con 5 jugadores)
+  const teamBlockYOffset       = lowerLabelsYStart - 18;
+  const leaderMarkYOffset      = lowerLabelsYStart - 14;
+  const memberDotYCenterOffset = lowerLabelsYStart - 6;
+
 
   // Anchos
   const teamBlockWidth = 23;

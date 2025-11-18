@@ -26,6 +26,7 @@ export default function App() {
 
   const [numHumans, setNumHumans] = useState(1);
   const [numBots, setNumBots] = useState(4);
+  const totalPlayers = numHumans + numBots; // ya está garantizado <= 10
 
 
   // toggles específicos de VizAvalon
@@ -321,14 +322,15 @@ export default function App() {
 
 
         {/* fila 2: arriba-izquierda => VizAvalon */}
-          <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
+        <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="3">
           <VizAvalon
             history={history}
-            numPlayers={5}
+            numPlayers={totalPlayers}   // <- aquí usamos humans + bots
             showVotes={showVotesViz}
             showQuests={showQuestsViz}
           />
         </Card>
+
 
 
         {/* fila 2: arriba-derecha => role */}
