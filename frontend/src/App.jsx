@@ -314,23 +314,31 @@ export default function App() {
             {/* Role visible aquí arriba */}
             <Text>Role: {role}</Text>
 
-            {/* Botón: mostrar/ocultar matriz de votos */}
-            <Button
-              variation="link"
-              onClick={() => setShowVotesViz((prev) => !prev)}
-            >
-              {showVotesViz ? "Hide votes grid" : "Show votes grid"}
-            </Button>
+            {/* Checkbox: mostrar/ocultar matriz de votos */}
+            <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              <input
+                type="checkbox"
+                checked={showVotesViz}
+                onChange={(e) => setShowVotesViz(e.target.checked)}
+                style={{ transform: "scale(1.1)" }}   // opcional, solo para que se vea más grande
+              />
+              <Text fontSize="0.9rem">Show votes grid</Text>
+            </label>
 
-            {/* Botón: mostrar/ocultar panel de quests */}
-            <Button
-              variation="link"
-              onClick={() => setShowQuestsViz((prev) => !prev)}
-            >
-              {showQuestsViz ? "Hide quests panel" : "Show quests panel"}
-            </Button>
+            {/* Checkbox: mostrar/ocultar panel de quests */}
+            <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              <input
+                type="checkbox"
+                checked={showQuestsViz}
+                onChange={(e) => setShowQuestsViz(e.target.checked)}
+                style={{ transform: "scale(1.1)" }}
+              />
+              <Text fontSize="0.9rem">Show quests panel</Text>
+            </label>
+
           </Flex>
         </Card>
+
 
         {/* ===== Fila 2: contenido izquierda (Viz + renames + QuestBoard) ===== */}
         <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="-1">
