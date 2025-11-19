@@ -39,9 +39,14 @@ export default function App() {
   const [role, setRole] = useState("");
   const [vote, setVote] = useState(null);
 
-  const [numHumans, setNumHumans] = useState(1);
   const [numBots, setNumBots] = useState(4);
-  const totalPlayers = numHumans + numBots; // ya está garantizado <= 10
+
+  // Siempre jugamos con 10 jugadores
+  const totalPlayers = 10;
+
+  // Humans se calcula automáticamente
+  const numHumans = totalPlayers - numBots;
+
 
 
   // toggles específicos de VizAvalon
@@ -268,43 +273,31 @@ export default function App() {
           <Flex direction="row" gap="small" alignItems="center">
             <Button onClick={createNewGame}>New game</Button>
 
-            {/* Número de jugadores humanos */}
-            <Text>Humans:</Text>
-            <Input
-              type="number"
-              min={1}
-              max={10}
-              width="5rem"
-              value={numHumans}
-              onChange={(e) => {
-                let h = Number(e.target.value);
-                if (isNaN(h)) return;
-                if (h + numBots > 10) {
-                  h = 10 - numBots;
-                }
-                setNumHumans(h);
-              }}
-            />
+            {/* Humans solo visibles, sin input */}
+            <Text>Humans: {numHumans}</Text>
 
-            {/* Número de bots */}
+            {/* Input SOLO para bots */}
             <Text>Bots:</Text>
             <Input
               type="number"
               min={0}
-              max={10}
+              max={totalPlayers}
               width="5rem"
               value={numBots}
               onChange={(e) => {
                 let b = Number(e.target.value);
                 if (isNaN(b)) return;
-                if (b + numHumans > 10) {
-                  b = 10 - numHumans;
-                }
+
+                // Clamp 0–totalPlayers (0 a 10)
+                if (b < 0) b = 0;
+                if (b > totalPlayers) b = totalPlayers;
+
                 setNumBots(b);
               }}
             />
           </Flex>
         </Card>
+
 
         <Card columnStart="3" columnEnd="-1">
           <Flex direction="row" gap="small" alignItems="center">
@@ -337,15 +330,16 @@ export default function App() {
           {/* VizAvalon */}
           <VizAvalon
             history={history}
-            numPlayers={numHumans + numBots}
+            numPlayers={totalPlayers}
             playerNames={playerNames}
             showVotes={showVotesViz}
             showQuests={showQuestsViz}
           />
 
+
           {/* Editor de nombres */}
           <div style={{ marginTop: "8px" }}>
-            {Array.from({ length: numHumans + numBots }, (_, i) => (
+            {Array.from({ length: totalPlayers}, (_, i) => (
               <div
                 key={i}
                 style={{
