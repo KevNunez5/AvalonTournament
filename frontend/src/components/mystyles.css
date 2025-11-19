@@ -1,3 +1,103 @@
 .cs-message__content {
   background-color: blue;
 }
+
+
+
+/* ===== Global Avalon layout ===== */
+
+.avalon-root {
+  min-height: 100vh;
+  padding: 16px;
+  /* Fun but not too loud background */
+  background: radial-gradient(circle at top left, #2b5876 0%, #4e4376 40%, #101322 100%);
+  color: #f9fafb;
+}
+
+/* Amplify Grid cards */
+.avalon-card {
+  background: rgba(15, 23, 42, 0.9); /* dark slate */
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Slightly different feel for “zones” if needed */
+.avalon-controls-card {
+  backdrop-filter: blur(6px);
+}
+
+.avalon-main-card {
+  margin-top: 12px;
+}
+
+.avalon-chat-card {
+  margin-top: 12px;
+}
+
+/* ===== Buttons & inputs ===== */
+
+.avalon-primary-button {
+  background: linear-gradient(135deg, #f97316, #fb923c); /* orange accent */
+  border-radius: 999px;
+  border: none;
+  color: #0f172a;
+  font-weight: 600;
+  padding-inline: 1.2rem;
+}
+
+.avalon-primary-button:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.4);
+}
+
+.avalon-number-input {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #e5e7eb;
+  text-align: center;
+}
+
+/* Checkboxes */
+.avalon-toggle input[type="checkbox"] {
+  accent-color: #22c55e; /* green accent for toggles */
+  cursor: pointer;
+}
+
+.avalon-toggle Text {
+  cursor: pointer;
+}
+
+/* Rename list under VizAvalon */
+.avalon-rename-list {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.avalon-rename-item {
+  padding: 2px 0;
+}
+
+.avalon-rename-item span {
+  color: #e5e7eb;
+}
+
+.avalon-link-button {
+  color: #60a5fa !important;
+}
+
+/* Chat container tweak so it blends with the new theme */
+.avalon-chat-card .cs-main-container {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.avalon-chat-card .cs-message-list {
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.avalon-chat-card .cs-message-input {
+  background: rgba(30, 41, 59, 0.98);
+}

@@ -8,6 +8,8 @@ import MyMessage from "./components/MyMessage";
 import MyVotingForm from "./components/MyVotingForm";
 import VizAvalon from "./components/VizAvalon";
 import QuestBoard from "./components/QuestBoard";
+import "./components/mystyles.css";
+
 
 const STAGE = {
   REVEAL: "RevealingRoles",
@@ -257,8 +259,8 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      {/* theme={theme} colorMode="dark"> */}
+     <ThemeProvider theme={theme} colorMode="dark">
+       <div className="avalon-root">
       <Grid
         templateColumns="1fr 1fr 1fr 1fr"
         templateRows="auto 1fr"   // ⬅️ solo 2 filas: controles + contenido
@@ -266,12 +268,14 @@ export default function App() {
         {/* ===== Fila 1: controles ===== */}
         <Card columnStart="1" columnEnd="3">
           <Flex direction="row" gap="small" alignItems="center">
-            <Button onClick={createNewGame}>New game</Button>
+
+            <Button onClick={createNewGame} className="avalon-primary-button">New game</Button>
 
             {/* Número de jugadores humanos */}
             <Text>Humans:</Text>
             <Input
               type="number"
+              className="avalon-number-input"
               min={1}
               max={10}
               width="5rem"
@@ -290,6 +294,7 @@ export default function App() {
             <Text>Bots:</Text>
             <Input
               type="number"
+              className="avalon-number-input"
               min={0}
               max={10}
               width="5rem"
@@ -306,16 +311,17 @@ export default function App() {
           </Flex>
         </Card>
 
-        <Card columnStart="3" columnEnd="-1">
-          <Flex direction="row" gap="small" alignItems="center">
+        <Card columnStart="3" columnEnd="-1" className="avalon-card avalon-controls-card">
+          <Flex direction="row" gap="0.75rem" alignItems="center">
+
             <Input placeholder="Game Id" />
-            <Button onClick={joinGame}>Join</Button>
+            <Button onClick={joinGame} className="avalon-primary-button">Join</Button>
 
             {/* Role visible aquí arriba */}
             <Text>Role: {role}</Text>
 
             {/* Checkbox: mostrar/ocultar matriz de votos */}
-            <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <label className="avalon-toggle" style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
               <input
                 type="checkbox"
                 checked={showVotesViz}
@@ -326,7 +332,7 @@ export default function App() {
             </label>
 
             {/* Checkbox: mostrar/ocultar panel de quests */}
-            <label style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            <label className="avalon-toggle" style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
               <input
                 type="checkbox"
                 checked={showQuestsViz}
@@ -341,7 +347,8 @@ export default function App() {
 
 
         {/* ===== Fila 2: contenido izquierda (Viz + renames + QuestBoard) ===== */}
-        <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="-1">
+        <Card columnStart="1" columnEnd="3" rowStart="2" rowEnd="-1" className="avalon-card avalon-main-card">
+
           {/* VizAvalon */}
           <VizAvalon
             history={history}
@@ -352,10 +359,11 @@ export default function App() {
           />
 
           {/* Editor de nombres */}
-          <div style={{ marginTop: "8px" }}>
+          <div style={{ marginTop: "8px" }} className="avalon-rename-list">
             {Array.from({ length: numHumans + numBots }, (_, i) => (
               <div
                 key={i}
+                className="avalon-rename-item"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -367,6 +375,7 @@ export default function App() {
                 <Button
                   size="small"
                   variation="link"
+                  className="avalon-link-button"
                   onClick={() => {
                     const newName = window.prompt(
                       `Nuevo nombre para player-${i}`,
@@ -383,20 +392,12 @@ export default function App() {
             ))}
           </div>
 
-          {/* QuestBoard debajo de la visualización */}
-          {showAnalytics && (
-            <div style={{ marginTop: "24px" }}>
-              <QuestBoard
-                numPlayers={5}
-                questSetup={[2, 3, 2, 3, 3]}
-                // en el siguiente paso: history={history}
-              />
-            </div>
-          )}
+        
         </Card>
 
         {/* ===== Fila 2: contenido derecha (chat) ===== */}
-        <Card columnStart="3" columnEnd="-1" rowStart="2" rowEnd="-1">
+        <Card columnStart="3" columnEnd="-1" rowStart="2" rowEnd="-1" className="avalon-card avalon-chat-card">
+
           <div style={{ position: "relative", height: "550px" }}>
             <MainContainer>
               <ChatContainer>
@@ -420,6 +421,7 @@ export default function App() {
           </div>
         </Card>
       </Grid>
+      </div>
     </ThemeProvider>
   );
 }

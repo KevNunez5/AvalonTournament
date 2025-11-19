@@ -2,7 +2,7 @@ import { Button, Radio, RadioGroupField } from "@aws-amplify/ui-react";
 
 function MyVotingForm(props) {
   return (
-    <RadioGroupField style={{backgroundColor: 'white', color: 'white', height: '42px', paddingLeft: '8px', padding: '4px', marginTop: '4px'}} 
+    <RadioGroupField style={{backgroundColor: '#1b2335', color: 'black', height: '42px', paddingLeft: '8px', padding: '4px', marginTop: '4px'}} 
         legend={props.legend} 
         value={props.vote}
         onChange={(e) => props.setVote(e.target.value)}

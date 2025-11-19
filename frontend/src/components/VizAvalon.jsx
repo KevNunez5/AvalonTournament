@@ -72,7 +72,7 @@ export default function VizAvalon({
           key={`name-top-${players[idx]}`} // key estable por ID interno
           x={leftLabelX}
           y={leftTopY + idx * rowHeight}
-          fill="black"
+          fill="#f1f5f9"
         >
           {name}
         </text>
@@ -114,7 +114,7 @@ export default function VizAvalon({
           key={`name-bottom-${players[idx]}`}
           x={leftLabelX}
           y={lowerLabelsYStart + idx * rowHeight}
-          fill="black"
+          fill="#f1f5f9"
         >
           {name}
         </text>
