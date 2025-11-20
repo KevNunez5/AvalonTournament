@@ -1,7 +1,7 @@
 
 
 
-import roles
+from .roles import *
 
 # These arrays stores the team sizes for the respective rounds, depending on how many players there are.
 five_players  = [-1,2,3,2,3,3]
@@ -25,17 +25,17 @@ def get_team_size(current_round:int, num_players:int) -> int:
 def get_roles(num_players:int) -> dict[str,int]:
 
     if num_players == 5:
-        return {roles.merlin: 1,  roles.good: 2, roles.evil: 2}
+        return {merlin: 1,  good: 2, evil: 2}
     elif num_players == 6:
-        return {roles.merlin: 1,  roles.good: 3, roles.evil: 2}
+        return {merlin: 1,  good: 3, evil: 2}
     elif num_players == 7:
-        return {roles.merlin: 1,  roles.good: 3, roles.evil: 3}
+        return {merlin: 1,  good: 3, evil: 3}
     elif num_players == 8:
-        return {roles.merlin: 1,  roles.good: 4, roles.evil: 3}
+        return {merlin: 1,  good: 4, evil: 3}
     elif num_players == 9:
-        return {roles.merlin: 1,  roles.good: 5, roles.evil: 3}
+        return {merlin: 1,  good: 5, evil: 3}
     elif num_players == 10:
-        return {roles.merlin: 1,  roles.good: 5, roles.evil: 4}
+        return {merlin: 1,  good: 5, evil: 4}
     else:
         raise Exception("Number of players not supported: " + str(num_players))
     

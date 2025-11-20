@@ -1,3 +1,3 @@
-from . import roles
-from . import avalon_rules
-from . import game_state
+from .roles import *
+from .avalon_rules import *
+from .game_state import *

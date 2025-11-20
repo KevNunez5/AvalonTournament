@@ -1,9 +1,9 @@
 
 import random
-from game_state import PublicGameState
-from roles import *
-from strategy import EvilStrategy, GoodStrategy, RandomStrategy
-from team import Team
+from .game_state import PublicGameState
+from . import roles as Roles
+from .strategy import EvilStrategy, GoodStrategy, RandomStrategy
+from .team import Team
 
 class Agent:
 
@@ -29,20 +29,20 @@ class Agent:
 
             self.strategy = RandomStrategy(self.game_state, self.my_index, self.roles, press=self.generate_arguments)
 
-        elif self.my_role == evil:       
+        elif self.my_role == Roles.evil:       
 
             # create a fake strategy in order to pretend to be a good player.
-            fake_roles = [unknown]*self.game_state.num_players
-            fake_roles[self.my_index] = good
+            fake_roles = [Roles.unknown]*self.game_state.num_players
+            fake_roles[self.my_index] = Roles.good
             fake_strategy = GoodStrategy(self.game_state, self.my_index, fake_roles, press=self.generate_arguments)
         
             # Create our *real* strategy.
             self.strategy = EvilStrategy(self.game_state, self.my_index, self.roles, fake_strategy, press=self.generate_arguments)
 
-        elif self.my_role == good:
+        elif self.my_role == Roles.good:
             self.strategy = GoodStrategy(self.game_state, self.my_index, self.roles, press=self.generate_arguments)
         
-        elif self.my_role == merlin:
+        elif self.my_role == Roles.merlin:
             self.strategy = GoodStrategy(self.game_state, self.my_index, self.roles, press=self.generate_arguments)
 
         else:

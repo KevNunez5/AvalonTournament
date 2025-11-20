@@ -5,9 +5,11 @@ import jsonpickle
 
 import subprocess
 
-from avalon_old.roles import unassigned, good, evil, merlin
+import avalon.avalon_rules as avalon_rules
+from avalon.roles import unassigned, good, evil, merlin
 from avalon.game_state import PublicGameState
-from avalon_old.game_simulator import get_roles, assign_roles
+from avalon.game_simulator import get_roles, assign_roles
+from avalon.team import Team
 
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
@@ -19,7 +21,6 @@ class GameController:
         self.nplayers = nplayers
         self.nbots = nbots
         subprocess.Popen(["python3", "bots.py", str(nbots)])
-
     
     def add_player(self, channel):
         player_id = len(self.players)
@@ -43,18 +44,22 @@ class GameController:
         }))
 
     def start_team_selection(self):
-        if self.attempt == 5:
+        print(self.public_state)
+        if self.public_state.attempt == 5:
             self.broadcast("... 5 attempts ...")
             return
         self.st_state = "TEAM_SELECTION"
-        self.players[0].write_message({"message": f"Asked Player {self.team_leader} to select a team"})
-        self.players[self.team_leader + 1].write_message({"action": "SelectTeam", "team_size": self.team_size, "message": f"Please select a team with {self.team_size} members", "index": -1})
+        self.players[0].write_message({"message": f"Asked Player {self.public_state.leader_index} to select a team"})
+        self.players[self.public_state.leader_index + 1].write_message({"action": "SelectTeam", "team_size": self.public_state.team_size, "message": f"Please select a team with {self.public_state.team_size} members", "index": -1})
 
     def start_team_voting(self):
         self.st_state = "TEAM_VOTING"
         self.players[0].write_message({"message": f"Asked Players to vote for a team", "index": -1})
         for player in self.players:
-            player.write_message({"action": "VoteTeam", "team": self.team, "message": "Please cast your vote"})
+            player.write_message({"action": "VoteTeam", "game_state": jsonpickle.dumps(self.public_state), "team": self.team, "message": "Please cast your vote"})
+
+        # for player in self.players:
+        #     player.write_message({"action": "VoteTeam", "team": self.team, "message": "Please cast your vote"})
 
     def start_quest(self):
         self.st_state = "ON_QUEST"
@@ -79,34 +84,45 @@ class GameController:
             if self.st_state == "INITIAL" and event["event"] == "AllPlayers":
                 self.broadcast("Welcome to Avalon!")
                 # 1. Create the object storing the public state of the game.
-                public_state = PublicGameState(5) # num_players)
+                pnames = list([f"player{i}" for i in range(self.nplayers)])
+                public_state = PublicGameState(pnames) # num_players)
                 self.public_state = public_state
 
                 #2. Assign roles
                 self.roles = get_roles(public_state)
                 print(self.roles)
 
-                for i, role_assignment in assign_roles(self.roles):
+                for i, role_assignment in assign_roles(public_state, self.roles):
                     print(i, role_assignment)
                     self.configure_player(i, public_state, role_assignment)
 
+                public_state.round = 1
                 self.round = 1
+                public_state.team_size = avalon_rules.get_team_size(public_state.round, public_state.num_players)
+
                 self.broadcast("Starting round " + str(self.round))
+                for player_index in range(len(self.roles)):
+                    self.players[player_index+1].write_message({"action": "StartRound", "game_state": jsonpickle.dumps(public_state)})
 
-                # Determine the team size for the current round.
-                #TODO: this assumes there are 5 players.
-                if self.round == 1 or self.round == 3:
-                    self.team_size = 2
-                else:
-                    self.team_size = 3
+                # # Determine the team size for the current round.
+                # #TODO: this assumes there are 5 players.
+                # if self.round == 1 or self.round == 3:
+                #     self.team_size = 2
+                # else:
+                #     self.team_size = 3
 
-                self.team_leader = 0
-                self.attempt = 1
+                # self.team_leader = 0
+                # self.attempt = 1
                 self.start_team_selection()
             elif self.st_state == "TEAM_SELECTION" and event["event"] == "TeamSelected":
                 self.team = event["team"]
-                print("... Broadcasting selected team")
-                self.broadcast(event["message"])
+
+                proposed_team = Team(self.public_state.player_names, list([i in self.team for i in range(self.nplayers)]))
+                self.public_state.proposed_team = proposed_team
+                
+                # print("... Broadcasting selected team", proposed_team)
+                # self.broadcast(event["message"])
+
                 self.votes = [None] * (len(self.players) - 1)
                 self.start_team_voting()
             elif self.st_state == "TEAM_VOTING" and event["event"] == "TeamVoted":
@@ -140,7 +156,7 @@ class GameController:
 
                     if self.public_state.get_winning_team() == unassigned:
                         self.round += 1
-                        if self.round > self.public_state.num_rounds:
+                        if self.round > avalon_rules.num_rounds:
                             self.broadcast("Game over!! ... but something went wrong")
                             self.st_state == "FINISHED"
                         else:
@@ -153,7 +169,7 @@ class GameController:
                             else:
                                 self.team_size = 3
 
-                            self.team_leader = (self.team_leader + 1) % (len(self.players) - 1)
+                            self.public_state.leader_index = (self.public_state.leader_index + 1) % (len(self.players) - 1)
                             self.attempt = 1
                             self.start_team_selection()
                     elif self.public_state.get_winning_team() == good:
@@ -197,7 +213,7 @@ class GamesHandler(tornado.web.RequestHandler):
     async def post(self):
         body = jsonpickle.decode(self.request.body)
         print("Creating a game instance", body)
-        controller = GameController(5,4)
+        controller = GameController(5,5)
         IOLoop.current().spawn_callback(controller.game_loop)
         self.application.add_handlers(
             r".*",  # match any host

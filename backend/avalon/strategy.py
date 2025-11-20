@@ -2,20 +2,20 @@ import abc
 import random
 import re
 import typing
-from Argumentation.argument import Argument
-from Argumentation.logic import AtLeast, Conjunction, Disjunction, Fact, Implication, ProverUtils
-from Argumentation.prover import Prover
-from avalon_logic import AvalonProver
-import avalon_logic
-import avalon_rules
-from decision import Decision
-from game_state import PublicGameState
-from hypothesis import Hypothesis
-from quest_result import QuestResult
-from roles import *
-from team import Team, TeamWithScore
-from team_proposal import TeamProposal
-import utils
+from .Argumentation.argument import Argument
+from .Argumentation.logic import AtLeast, Conjunction, Disjunction, Fact, Implication, ProverUtils
+from .Argumentation.prover import Prover
+from .avalon_logic import AvalonProver
+from . import avalon_logic
+from . import avalon_rules
+from .decision import Decision
+from .game_state import PublicGameState
+from .hypothesis import Hypothesis
+from .quest_result import QuestResult
+from . import roles as Roles
+from .team import Team, TeamWithScore
+from .team_proposal import TeamProposal
+from . import utils
 
 class Strategy:
 
@@ -45,7 +45,7 @@ class Strategy:
         
         string = self.my_name + " (" + self.my_role + ")"
 
-        if self.my_role != merlin:
+        if self.my_role != Roles.merlin:
             string += "  "
 
         return string
@@ -144,7 +144,7 @@ class RandomStrategy(Strategy):
 
     def vote_quest(self, team:Team) -> bool:
         
-        if self.my_role == evil:
+        if self.my_role == Roles.evil:
             return random.choice([True, False])
         else:
             return True
@@ -156,7 +156,7 @@ class RandomStrategy(Strategy):
 
         guessed_index = self.my_index
 
-        while self.roles[guessed_index] == evil:
+        while self.roles[guessed_index] == Roles.evil:
             guessed_index = random.randint(0, self.game_state.num_players-1)
 
         return guessed_index
@@ -210,7 +210,7 @@ class GoodStrategy(Strategy):
             num_evil = 0
             num_good = 0
             for i in range(len(partial)):
-                if partial[i] == evil:
+                if partial[i] == Roles.evil:
                     num_evil += 1
                 else:
                     num_good += 1
@@ -230,13 +230,13 @@ class GoodStrategy(Strategy):
 
                 if num_evil < max_evil:
                     copy1 = partial.copy()
-                    copy1.append(evil)
+                    copy1.append(Roles.evil)
                     open_list.append(copy1)
 
                 if num_good < max_good:
 
                     copy2 = partial.copy()
-                    copy2.append(good)
+                    copy2.append(Roles.good)
                     open_list.append(copy2)
 
         self.calculate_player_scores()
@@ -292,7 +292,7 @@ class GoodStrategy(Strategy):
 
         # 3. If I am Merlin, then check if any of the suggested teams only contains good players. 
         #  If that is the case, then we should only return such teams.
-        if self.my_role == merlin:
+        if self.my_role == Roles.merlin:
 
             if len(all_teams_filtered) == 0:
                 raise Exception("all_teams_filtered == 0")
@@ -411,7 +411,7 @@ class GoodStrategy(Strategy):
         # 1. Update our hypotheses, based on the team proposed by the leader.
         for hyp in self.hypotheses:
             
-            if is_good(hyp.role_assignment[game_state.leader_index]):
+            if Roles.is_good(hyp.role_assignment[game_state.leader_index]):
                 continue
 
             if game_state.proposed_team.count_evil_players(hyp.role_assignment) > max_evil_players_in_team:
@@ -882,7 +882,7 @@ class GoodStrategy(Strategy):
         for i in range(self.game_state.num_players):
             
             # Count in how many plausible hypotheses player i is good.
-            num_good = sum(1 for hyp in self.hypotheses if hyp.plausible and is_good(hyp.role_assignment[i]))
+            num_good = sum(1 for hyp in self.hypotheses if hyp.plausible and Roles.is_good(hyp.role_assignment[i]))
             
             self.is_certainly_evil[i] = (num_good == 0)
             self.is_certainly_good[i] = (num_good == num_plausible_hypotheses)
@@ -899,7 +899,7 @@ class GoodStrategy(Strategy):
 
             for hyp in self.hypotheses:
 
-                if not hyp.plausible and is_good(hyp.role_assignment[i]):
+                if not hyp.plausible and Roles.is_good(hyp.role_assignment[i]):
                     #reasons_against.add(str(hyp.reason_for_rejection))
                     #reasons_against.add(hyp.reason_for_rejection_text)
                     reasons_against.add(hyp.reason_for_rejection)
@@ -960,7 +960,7 @@ class GoodStrategy(Strategy):
 
         for i in range(self.game_state.num_players):
             
-            num_good = sum(1 for hyp in self.hypotheses if hyp.plausible and is_good(hyp.role_assignment[i]))
+            num_good = sum(1 for hyp in self.hypotheses if hyp.plausible and Roles.is_good(hyp.role_assignment[i]))
 
             self.scores[i] = num_good / num_plausible_hypotheses
 
@@ -1060,7 +1060,7 @@ class EvilStrategy(Strategy):
                 if counter >= len(self.roles):
                     print("ERROR: " + str(counter) + " " + str(self.roles))
 
-                if is_good(self.roles[counter]):
+                if Roles.is_good(self.roles[counter]):
                     team_as_list[counter] = True
                     current_size += 1
                 counter += 1
@@ -1137,7 +1137,7 @@ class EvilStrategy(Strategy):
 
         for hyp in self.fake_strategy.hypotheses:
 
-            if is_good(hyp.role_assignment[game_state.leader_index]):
+            if Roles.is_good(hyp.role_assignment[game_state.leader_index]):
                 continue
 
             if game_state.proposed_team.count_evil_players(hyp.role_assignment) > max_evil_players_in_team:
@@ -1214,7 +1214,7 @@ class EvilStrategy(Strategy):
                 next_leader = self.game_state.leader_index + 1 + i
                 next_leader = next_leader % self.game_state.num_players
                 
-                if not is_evil(self.roles[next_leader]):
+                if not Roles.is_evil(self.roles[next_leader]):
                     all_next_leaders_are_evil = False
                     break
             
@@ -1350,7 +1350,7 @@ class EvilStrategy(Strategy):
             return False
         
         # If I'm not the team leader, but the team leader is evil, and only one no-vote is needed, then vote for success
-        if is_evil(self.game_state.get_leader_name()) and num_required_no_votes == 1:
+        if Roles.is_evil(self.game_state.get_leader_name()) and num_required_no_votes == 1:
                 return True
 
         else:
@@ -1370,7 +1370,7 @@ class EvilStrategy(Strategy):
 
         guessed_index = self.my_index
 
-        while self.roles[guessed_index] == evil:
+        while self.roles[guessed_index] == Roles.evil:
             guessed_index = random.randint(0, self.game_state.num_players-1)
 
         return guessed_index

@@ -1,8 +1,8 @@
 
 import typing
-import avalon_rules
-from roles import *
-from team import Team
+from . import avalon_rules
+from .roles import *
+from .team import Team
 
 
 

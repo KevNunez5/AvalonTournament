@@ -5,13 +5,13 @@
     
 
 import typing
-from Argumentation.logic import AtLeast, Fact, Formula, Implication, Literal, ProverUtils
-from Argumentation.prover import Prover
-import avalon_rules
-from game_state import PublicGameState
-from quest_result import QuestResult
-from team import Team
-from team_proposal import TeamProposal
+from .Argumentation.logic import AtLeast, Fact, Formula, Implication, Literal, ProverUtils
+from .Argumentation.prover import Prover
+from . import avalon_rules
+from .game_state import PublicGameState
+from .quest_result import QuestResult
+from .team import Team
+from .team_proposal import TeamProposal
 
 
 

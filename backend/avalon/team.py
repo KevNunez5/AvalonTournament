@@ -1,6 +1,6 @@
 
 
-import roles
+from . import roles as Roles
 
 
 class Team:
@@ -37,7 +37,7 @@ class Team:
         count = 0
         for player_index in range(len(player_roles)):
             
-            if self.as_list[player_index] and roles.is_evil(player_roles[player_index]):
+            if self.as_list[player_index] and Roles.is_evil(player_roles[player_index]):
                 count+=1
         
         return count

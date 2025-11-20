@@ -1,6 +1,6 @@
 
 from typing import Literal
-from Argumentation.logic import Formula, Literal
+from ..Argumentation.logic import Formula, Literal
 
 
 

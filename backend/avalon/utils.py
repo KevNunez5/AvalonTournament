@@ -1,7 +1,7 @@
 
-from game_state import PublicGameState
-from roles import *
-from team import Team
+from .game_state import PublicGameState
+from . import roles as Roles
+from .team import Team
 
 
 VERBOSITY_LEVEL = 0
@@ -11,7 +11,7 @@ def count_evil_players(team:Team, roles):
     num_evil_players_in_team = 0
 
     for i in range(len(roles)):
-        if team.contains_player(i) and is_evil(roles[i]):
+        if team.contains_player(i) and Roles.is_evil(roles[i]):
             #print("is evil team member: " + str(i))
             num_evil_players_in_team += 1
 

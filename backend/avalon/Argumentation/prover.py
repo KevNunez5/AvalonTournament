@@ -4,7 +4,7 @@
 import re
 from typing import Self, cast
 import typing
-from Argumentation.logic import AtLeast, Conjunction, Disjunction, Fact, Formula, Implication, Literal, ProverUtils
+from ..Argumentation.logic import AtLeast, Conjunction, Disjunction, Fact, Formula, Implication, Literal, ProverUtils
 
 
 class Prover:

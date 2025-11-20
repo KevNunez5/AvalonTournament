@@ -1,5 +1,5 @@
-from Argumentation.argument import Argument
-from Argumentation.logic import Formula
+from .Argumentation.argument import Argument
+from .Argumentation.logic import Formula
 
 
 class Hypothesis:

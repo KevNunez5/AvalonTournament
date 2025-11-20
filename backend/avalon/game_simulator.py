@@ -3,13 +3,15 @@
 import math
 import random
 import sys
-from agent import Agent
+from .agent import Agent
 
-import avalon_rules
-from game_state import PublicGameState
-from roles import *
-from team import Team
-import utils
+from typing import Generator
+
+from . import avalon_rules, utils
+from .game_state import PublicGameState
+from . import roles as Roles
+from .team import Team
+# import utils
 
 
 
@@ -87,11 +89,11 @@ def run_simulation():
         print("Number of failed quests:     " + str(public_state.num_quests_failed))
 
 
-        if public_state.get_winning_team() != unassigned:
+        if public_state.get_winning_team() != Roles.unassigned:
             break
         
    
-    if public_state.get_winning_team() == unassigned:
+    if public_state.get_winning_team() == Roles.unassigned:
         print("Num quests succeeded: " + str(public_state.num_quests_succeeded))
         print("Num quests failed: " + str(public_state.num_quests_failed))
         print("Num quests required for victory: " + str(avalon_rules.num_quests_needed_for_victory))
@@ -100,7 +102,7 @@ def run_simulation():
 
     # If the good team managed to successfully end 3 quests, then the evil team still has the chance to 
     # overturn the outcome by trying to expose Merlin.
-    if public_state.get_winning_team() == good:
+    if public_state.get_winning_team() == Roles.good:
         
         print()
         exposed = expose_merlin(players, public_state, roles)
@@ -115,13 +117,13 @@ def run_simulation():
     print("The game has finished! " + public_state.get_winning_team() + " won")        
             
 
-def assign_roles(public_state:PublicGameState) -> list[str]:
+def get_roles(public_state:PublicGameState) -> list[str]:
 
-    """Is called at the beginning of the game. Randomly assigns roles to players.
-        The dictonary 'role_to_num_players' indicates for each role how many players need to get assigned that role.
+    """Is called at the beginning of the game. Randomly assigns roles to players
+        the given dictonary indicates for each role how many players need to get assigned that role.
     """
 
-    roles = [unassigned] * num_players
+    roles = [Roles.unassigned] * public_state.num_players
 
     for role, num_players_with_role in public_state.role_to_num_players.items():
         
@@ -129,13 +131,66 @@ def assign_roles(public_state:PublicGameState) -> list[str]:
         num_assigned = 0
         while num_assigned < num_players_with_role:
             
-            r:int = random.randint(0, num_players-1)
+            r:int = random.randint(0, public_state.num_players-1)
             
-            if roles[r] == unassigned:
+            if roles[r] == Roles.unassigned:
                 roles[r] = role
                 num_assigned += 1
     
     return roles
+
+
+
+def assign_roles(public_state:PublicGameState, roles:list[str]) -> Generator[(int,list[str])]:
+    """Ensures that each player knows its own role.
+        Furthermore, ensures that the evil players and Merlin know who the evil players are.
+    """
+
+    for i in range(public_state.num_players):
+
+        revealed_roles = []
+
+        # For each type of role, determine which roles to reveal.
+        if roles[i] == Roles.evil:
+            
+            revealed_roles = [Roles.evil if role==Roles.evil else Roles.good for role in roles]
+
+
+        elif roles[i] == Roles.merlin:
+           
+            revealed_roles = roles.copy()
+                   
+        elif roles[i] == Roles.good:
+            
+            revealed_roles = [Roles.unknown] * public_state.num_players
+            revealed_roles[i] = Roles.good
+                    
+        else:
+            raise Exception("Unknown role: " + roles[i])
+
+        yield i, revealed_roles
+
+# def assign_roles(public_state:PublicGameState) -> list[str]:
+
+#     """Is called at the beginning of the game. Randomly assigns roles to players.
+#         The dictonary 'role_to_num_players' indicates for each role how many players need to get assigned that role.
+#     """
+
+#     roles = [unassigned] * num_players
+
+#     for role, num_players_with_role in public_state.role_to_num_players.items():
+        
+
+#         num_assigned = 0
+#         while num_assigned < num_players_with_role:
+            
+#             r:int = random.randint(0, num_players-1)
+            
+#             if roles[r] == unassigned:
+#                 roles[r] = role
+#                 num_assigned += 1
+    
+#     return roles
 
 
 
@@ -152,19 +207,19 @@ def reveal_roles(players:list[Agent], roles:list[str]):
         revealed_roles = []
 
         # For each type of role, determine which roles to reveal.
-        if roles[i] == evil:
+        if roles[i] == Roles.evil:
             
-            revealed_roles = [evil if role==evil else good for role in roles]
+            revealed_roles = [Roles.evil if role==Roles.evil else Roles.good for role in roles]
 
 
-        elif roles[i] == merlin:
+        elif roles[i] == Roles.merlin:
            
-            revealed_roles = roles.copy()
+            revealed_roles = Roles.copy()
                    
-        elif roles[i] == good:
+        elif roles[i] == Roles.good:
             
-            revealed_roles = [unknown] * len(players)
-            revealed_roles[i] = good
+            revealed_roles = [Roles.unknown] * len(players)
+            revealed_roles[i] = Roles.good
                     
         else:
             raise Exception("Unknown role: " + roles[i])
@@ -365,7 +420,7 @@ def expose_merlin(players:list[Agent], game_state:PublicGameState, roles:list[st
 
     # get the first evil player
     for i in range(num_players):
-        if is_evil(roles[i]):
+        if Roles.is_evil(roles[i]):
             assassin = players[i]
             break
 
@@ -374,7 +429,7 @@ def expose_merlin(players:list[Agent], game_state:PublicGameState, roles:list[st
 
     print("Evil players: We think that player " + str(guessed_merlin_index) + " is Merlin.")
 
-    game_state.merlin_exposed = (roles[guessed_merlin_index] == merlin)
+    game_state.merlin_exposed = (roles[guessed_merlin_index] == Roles.merlin)
     
     return game_state.merlin_exposed
  
