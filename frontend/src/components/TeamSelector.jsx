@@ -1,4 +1,3 @@
-// ./components/TeamSelector.jsx
 import React, { useMemo, useState } from "react";
 import { Button, Text } from "@aws-amplify/ui-react";
 
@@ -10,7 +9,7 @@ import { Button, Text } from "@aws-amplify/ui-react";
  * - onConfirm: (selectedIndices: number[]) => void
  * - onCancel?: () => void   // opcional
  */
-export default function TeamSelector({
+function TeamSelector({
   playerNames = [],
   numPlayers = 5,
   maxSelected = 2,
@@ -45,11 +44,7 @@ export default function TeamSelector({
 
   return (
     <div className="team-selector-root" style={{ padding: "0.75rem" }}>
-      <Text
-        as="h3"
-        fontSize="1rem"
-        marginBottom="0.5rem"
-      >
+      <Text as="h3" fontSize="1rem" marginBottom="0.5rem">
         Select {maxSelected} player{maxSelected > 1 ? "s" : ""} for the quest
       </Text>
 
@@ -96,11 +91,7 @@ export default function TeamSelector({
         }}
       >
         {onCancel && (
-          <Button
-            size="small"
-            variation="link"
-            onClick={onCancel}
-          >
+          <Button size="small" variation="link" onClick={onCancel}>
             Cancel
           </Button>
         )}
@@ -117,3 +108,5 @@ export default function TeamSelector({
     </div>
   );
 }
+
+export default TeamSelector;

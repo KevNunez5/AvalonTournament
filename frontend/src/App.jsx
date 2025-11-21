@@ -9,6 +9,7 @@ import MyVotingForm from "./components/MyVotingForm";
 import VizAvalon from "./components/VizAvalon";
 import QuestBoard from "./components/QuestBoard";
 import "./components/mystyles.css";
+import TeamSelector from "./components/TeamSelector";
 
 
 const STAGE = {
@@ -56,6 +57,37 @@ export default function App() {
   const gameState = useRef({ index: undefined, role: undefined, stage: undefined });
 
   const [showAnalytics, setShowAnalytics] = useState(true);
+
+  const [debugSelectedTeam, setDebugSelectedTeam] = useState([]);
+
+  const debugHistory = [
+    {
+      leader: "player-0",
+      team: ["player-0", "player-1"],
+      votes: [
+        { player: "player-0", vote: "yes" },
+        { player: "player-1", vote: "yes" },
+        { player: "player-2", vote: "yes" },
+        { player: "player-3", vote: "yes" },
+        { player: "player-4", vote: "yes" },
+      ],
+      team_vote_outcome: "succeeded", // el equipo fue aceptado
+      quest_vote_outcome: "failed",   // pero la misión falló
+    },
+  ];
+
+  const debugPlayerNames = [
+    "Yangus",
+    "Jessica",
+    "Angelo",
+    "Valentina",
+    "Medea",
+  ];
+
+
+  const [useDebugViz, setUseDebugViz] = useState(false);
+
+
 
   // ===== Helpers para parsing de mensajes a "history" (Viz-ready) =====
   const history = useMemo(() => {
@@ -342,6 +374,19 @@ export default function App() {
               <Text fontSize="0.9rem">Show quests panel</Text>
             </label>
 
+            <label
+              className="avalon-toggle"
+              style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <input
+                type="checkbox"
+                checked={useDebugViz}
+                onChange={(e) => setUseDebugViz(e.target.checked)}
+                style={{ transform: "scale(1.1)" }}
+              />
+              <Text fontSize="0.9rem">Use debug VizAvalon</Text>
+            </label>
+
           </Flex>
         </Card>
 
@@ -351,12 +396,31 @@ export default function App() {
 
           {/* VizAvalon */}
           <VizAvalon
-            history={history}
-            numPlayers={numHumans + numBots}
-            playerNames={playerNames}
+            history={useDebugViz ? debugHistory : history}
+            numPlayers={useDebugViz ? 5 : numHumans + numBots}
+            playerNames={useDebugViz ? debugPlayerNames : playerNames}
             showVotes={showVotesViz}
             showQuests={showQuestsViz}
           />
+
+
+          {/* Demo: TeamSelector */}
+          <div style={{ marginTop: "12px", borderTop: "1px solid #333", paddingTop: "8px" }}>
+            <TeamSelector
+              playerNames={playerNames}
+              numPlayers={numHumans + numBots}
+              maxSelected={2}   // cambia este valor para probar distintos tamaños de equipo
+              onConfirm={(indices) => {
+                console.log("Equipo seleccionado (indices):", indices);
+                setDebugSelectedTeam(indices);
+              }}
+            />
+
+            {/* Texto de debug para que veas que sí está funcionando */}
+            <Text fontSize="0.8rem" marginTop="0.25rem">
+              Debug team: [{debugSelectedTeam.join(", ")}]
+            </Text>
+          </div>
 
           {/* Editor de nombres */}
           <div style={{ marginTop: "8px" }} className="avalon-rename-list">
