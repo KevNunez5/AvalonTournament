@@ -146,7 +146,7 @@ export default function VizAvalon({
                     height={numPlayers * rowHeight - 4}
                     rx="1%"
                     fill={getColor(round.quest_vote_outcome)}
-                    fillOpacity="0.5"
+                    fillOpacity="0.4"
                   />
                   {round.team_vote_outcome === "failed" ? (
                     <line

@@ -78,6 +78,7 @@ export default function App() {
 
   const [role, setRole] = useState("");
   const [knownEvil, setKnownEvil] = useState([]);
+  const [isGuessingMerlin, setIsGuessingMerlin] = useState(false);
   const [vote, setVote] = useState(null);
 
   const [numHumans, setNumHumans] = useState(1);
