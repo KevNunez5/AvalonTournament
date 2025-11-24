@@ -98,7 +98,7 @@ export default function App() {
   const [debugSelectedTeam, setDebugSelectedTeam] = useState([]);
 
   // 💡 Cambia esto a false cuando ya no quieras el truco
-  const FORCE_MERLIN_FOR_TEST = true;
+  const FORCE_MERLIN_FOR_TEST = false;
 
 
   const debugHistory = [
@@ -387,9 +387,9 @@ function normalizeRole(r) {
       if (msg.action === "RevealRoles") {
         const myIndex = msg.index;
         const allRoles = msg.roles || [];
+
         const myRole = allRoles[myIndex];
 
-        // Guardamos en gameState
         gameState.current = {
           index: myIndex,
           role: myRole,
@@ -400,29 +400,50 @@ function normalizeRole(r) {
 
         const myRoleNorm = normalizeRole(myRole);
 
-        // Si soy Merlin, calculo qué jugadores son Evil
+        // calculamos evilIndices (si aplica)
+        let evilIndices = [];
+
         if (myRoleNorm === "merlin") {
-          const evilIndices = allRoles
+          evilIndices = allRoles
             .map((r, i) => ({ i, r: normalizeRole(r) }))
             .filter(({ i, r }) => r === "evil" && i !== myIndex)
             .map(({ i }) => i);
 
           setKnownEvil(evilIndices);
+          console.log("[RevealRoles] As Merlin I see evil players:", evilIndices);
         } else {
           setKnownEvil([]);
         }
 
-        // Mensajes al chat: el Reveal y el "soy tal rol"
-        setMessages((prev) => [
-          ...prev,
-          msg,
-          {
-            message: `I am Player ${myIndex}, with role '${myRole}'`,
-            index: -1,
-            action: "LocalInfo",
-          },
-        ]);
-        return; // 👈 importante: no seguimos procesando este msg
+        // armamos los mensajes que se verán en el chat
+        setMessages((prev) => {
+          const next = [
+            ...prev,
+            msg, // el RevealRoles original (si quieres verlo)
+            {
+              message: `I am Player ${myIndex}, with role '${myRole}'`,
+              index: -1,
+              action: "LocalInfo",
+            },
+          ];
+
+          // Si soy Merlin y tengo info de malos, agrego la burbuja extra
+          if (myRoleNorm === "merlin" && evilIndices.length > 0) {
+            const evilNames = evilIndices
+              .map((idx) => playerNames[idx] || `player-${idx}`)
+              .join(", ");
+
+            next.push({
+              message: `As Merlin, you know evil players are: ${evilNames}`,
+              index: -1,
+              action: "LocalInfo",
+            });
+          }
+
+          return next;
+        });
+
+        return;
       }
 
       // 4) Resto de acciones del servidor
