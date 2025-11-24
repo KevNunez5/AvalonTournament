@@ -1,15 +1,11 @@
 
 #Roles:
+merlin = "Merlin"
 good = "Good"
 evil = "Evil"
 
 unassigned = "unassigned"
 unknown = "unknown"
-
-#Special roles:
-merlin = "Merlin"
-none = "none"
-
 
 def is_good(role) -> bool:
     return role == merlin or role == good

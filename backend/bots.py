@@ -3,6 +3,8 @@ import websockets
 import jsonpickle
 from avalon.agent import Agent
 from avalon.utils import get_team_string
+import sys
+import traceback
 
 async def avalon_bot(loop: asyncio.AbstractEventLoop):
     uri = "ws://localhost:8888/ws"
@@ -21,7 +23,10 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
 
                 if "action" not in message:
                     continue
-                if  message["action"] == "RevealRoles":
+                if message["action"] == "StartRound":
+                    public_state = jsonpickle.decode(message["game_state"])
+                    agent.strategy.on_new_round(public_state)
+                elif  message["action"] == "RevealRoles":
                     index = message["index"]
                     public_state = message["game_state"]
                     roles = message["roles"]
@@ -31,10 +36,10 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
                     team_size = message["team_size"]
                     print("-------------------------------")
                     print(f"Player {agent.my_index}: I am team leader and have to select a team")
-                    proposed_team: list[bool] = agent.strategy.propose_team(team_size)
+                    proposed_team: list[bool] = agent.strategy.propose_team(team_size).as_list
                     team = [index for index in range(len(proposed_team)) if proposed_team[index]]
                     print("Team", proposed_team, team)
-                    print("Player " + str(agent.my_index) + f" ({agent.roles}) " + "Proposes the following team: " + get_team_string(proposed_team, roles))
+                    print("Player " + str(agent.my_index) + f" ({agent.roles}) " + "Proposes the following team: " + get_team_string(proposed_team, public_state.player_names, roles))
                     print(f"Player {agent.my_index} proposes the following team [{",".join([str(p) for p in team])}]")
                     print("-------------------------------")
                     await websocket.send(jsonpickle.encode({
@@ -43,12 +48,12 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
                         "team": team,
                         "index": agent.my_index
                     }))
+
                 elif message["action"] == "VoteTeam":
                     team = message["team"]
-                    proposed_team = [False] * agent.game_state.num_players
-                    for player in team:
-                        proposed_team[player] = True
-                    my_vote = agent.strategy.vote_team(proposed_team)
+                    public_state = jsonpickle.decode(message["game_state"])
+                    agent.strategy.inform_proposed_team(public_state)
+                    my_vote = agent.strategy.vote_team()
                     print("Player " + str(agent.my_index) + f" ({agent.roles}) " + "decides to vote " + str(my_vote) + " on team")
                     await websocket.send(jsonpickle.encode({
                         "message": f"Player {agent.my_index} voted '{my_vote}' on team",
@@ -58,10 +63,10 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
                     }))
                 elif message["action"] == "VoteQuest":
                     team = message["team"]
-                    proposed_team = [False] * agent.game_state.num_players
-                    for player in team:
-                        proposed_team[player] = True
-                    my_vote = agent.strategy.vote_quest(proposed_team)
+                    # proposed_team = [False] * agent.game_state.num_players
+                    # for player in team:
+                    #     proposed_team[player] = True
+                    my_vote = agent.strategy.vote_quest(public_state.proposed_team)
                     print("Player " + str(agent.my_index) + f" ({agent.roles}) " + "decides to vote " + str(my_vote) + " on quest")
                     await websocket.send(jsonpickle.encode({
                         "message": f"Player {agent.my_index} voted on quest",
@@ -85,12 +90,17 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
         print(f"WebSocket connection closed with error: {e}")
         loop.stop()
     except Exception as e:
+        traceback.print_exception(e)
         print(f"An unexpected error occurred: {e}")
         loop.stop()
 
 if __name__ == "__main__":
+    if (len(sys.argv) != 2):
+        raise("You forgot to specify the number of bots")
+    nbots = int(sys.argv[1])
+    # nbots = 5
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    for i in range(4):
+    for i in range(nbots):
         asyncio.ensure_future(avalon_bot(loop))
     loop.run_forever()

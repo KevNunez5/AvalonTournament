@@ -1,0 +1,4 @@
+
+
+in the method GoodStrategy.get_objective_team_vote_decision():
+    create an argument why we know that at least one player is evil.

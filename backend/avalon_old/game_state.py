@@ -1,8 +1,5 @@
 
-import typing
-from . import avalon_rules
 from .roles import *
-from .team import Team
 
 
 
@@ -11,51 +8,41 @@ class PublicGameState:
 
     """Represents all the information that is publically available to all players."""
 
+    num_rounds = 5
+    num_attempts_per_round = 5
+    num_utterances_per_player = 10 # How many things each player can say during each discussion phase.
+    
+    num_quests_needed_for_victory = 3
 
-
-    def __init__(self, player_names:list[str]):
+    def __init__(self, num_players):
        
-        self.num_players = len(player_names)
-        self.player_names = player_names.copy()
+        self.num_players = num_players
         
-        self.role_to_num_players = avalon_rules.get_roles(self.num_players)
-
-        self.num_good_players = typing.cast(int, self.role_to_num_players.get(good)) + 1 # add one for Merlin.
-        self.num_evil_players = typing.cast(int, self.role_to_num_players.get(evil))
-
-        self.round = 0
-
-        self.team_size = -1 # the size of the team for the current round. The correct value for this variable should be set later.
+        # TODO adapt this for the case that there are more than 5 players.
+        self.num_evil_players = 2
+        self.num_good_players = 3
+        self.role_to_num_players:dict[str,int] = {merlin: 1,  good: 2, evil: self.num_evil_players}
+       
         self.leader_index = 0
         self.attempt = 0
 
         self.num_quests_succeeded = 0
         self.num_quests_failed = 0
 
-        # is set to True whenever in some round the players were not able to select a team.
-        self.team_vote_failed = False
+
 
         self.winning_team = unassigned
         self.merlin_exposed = False
 
-        self.proposed_team = Team(self.player_names)
-
-
-    def get_leader_name(self):
-        return self.player_names[self.leader_index]
-    
 
     def get_winning_team(self):
         
-        if  self.num_quests_succeeded >= avalon_rules.num_quests_needed_for_victory:
-            self.winning_team = good
-        
-        elif self.num_quests_failed >= avalon_rules.num_quests_needed_for_victory:
-            self.winning_team = evil
 
-        elif self.team_vote_failed:
+
+        if  self.num_quests_succeeded > self.num_rounds / 2:
+            self.winning_team = good
+        elif self.num_quests_failed > self.num_rounds / 2:
             self.winning_team = evil
-        
         else:
             self.winning_team = unassigned
 
@@ -63,6 +50,8 @@ class PublicGameState:
             self.winning_team = evil
 
         return self.winning_team
+
+
 
 # class FullGameState:
 
