@@ -23,6 +23,42 @@ const STAGE = {
 
 const theme = { name: "my-theme", overrides: [defaultDarkModeOverride] };
 
+// 👇 Helper para "inventar" el mensaje de propuesta de equipo cuando venga de un bot
+function enrichTeamMessage(msg) {
+  if (!msg) return msg;
+
+  // Si ya trae message, no tocamos nada
+  if (msg.message && msg.message.trim() !== "") return msg;
+
+  // Si trae un array de team, lo interpretamos como propuesta de equipo
+  if (Array.isArray(msg.team) && msg.team.length > 0) {
+    // ¿Quién es el líder?
+    // En tu payload humano usas `index`, pero el backend podría usar `leader`.
+    const leaderIdx =
+      typeof msg.index === "number"
+        ? msg.index
+        : typeof msg.leader === "number"
+        ? msg.leader
+        : null;
+
+    const teamStr = `[${msg.team.join(", ")}]`;
+
+    const leaderText =
+      leaderIdx !== null ? `Player ${leaderIdx}` : "A bot";
+
+    const text = `${leaderText} proposes the following team ${teamStr}`;
+
+    return {
+      ...msg,
+      message: text,
+    };
+  }
+
+  // Si no hay team ni message, lo dejamos igual
+  return msg;
+}
+
+
 export default function App() {
 
   const [playerNames, setPlayerNames] = useState(
@@ -281,6 +317,7 @@ export default function App() {
   const wrapperSetVote = (value) => setVote(value);
 
   // ====== Crear juego (observador) ======
+  // ====== Crear juego (observador) ======
   const createNewGame = async () => {
     if (wspRef.current) {
       try { await wspRef.current.close(); } catch {}
@@ -293,8 +330,8 @@ export default function App() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        nplayers: totalPlayers, // 👈 humanos + bots
-        nbots: numBots          // 👈 solo los bots
+        nplayers: totalPlayers,
+        nbots: numBots
       }),
     });
 
@@ -303,11 +340,13 @@ export default function App() {
     wspRef.current = wsp;
 
     wsp.onMessage.addListener((data) => {
-      const msg = JSON.parse(data);
-      // 🔧 guardamos TODO el objeto que manda el backend
+      const raw = JSON.parse(data);
+      console.log("[WS/createNewGame] raw msg:", raw);
+
+      const msg = enrichTeamMessage(raw);   // 👈 aquí usamos el helper
+
       setMessages((prev) => [...prev, msg]);
     });
-
   };
 
 
@@ -323,20 +362,22 @@ export default function App() {
     wspRef.current = wsp;
 
     wsp.onMessage.addListener((data) => {
-      const msg = JSON.parse(data);
+      const raw = JSON.parse(data);
+      console.log("[WS/joinGame] raw msg:", raw);
 
-      if (msg.action === "RevealRoles") {
+      if (raw.action === "RevealRoles") {
         gameState.current = {
-          index: msg.index,
-          role: msg.roles[msg.index],
+          index: raw.index,
+          role: raw.roles[raw.index],
           stage: STAGE.REVEAL,
         };
         setRole(gameState.current.role);
 
-        // Guardamos el mensaje original del backend
+        const revealMsg = enrichTeamMessage(raw);  // por consistencia
+
         setMessages((prev) => [
           ...prev,
-          msg,
+          revealMsg,
           {
             message: `I am Player ${gameState.current.index}, with role '${gameState.current.role}'`,
             index: -1,
@@ -346,22 +387,22 @@ export default function App() {
         return;
       }
 
-      if (msg.action === "VoteTeam") {
+      if (raw.action === "VoteTeam") {
         gameState.current.stage = STAGE.VOTE_TEAM;
         setVote(null);
-      } else if (msg.action === "VoteQuest") {
+      } else if (raw.action === "VoteQuest") {
         gameState.current.stage = STAGE.VOTE_QUEST;
         setVote(null);
-      } else if (msg.action === "SelectTeam") {
-        console.log(">>> Received SelectTeam message:", msg);
+      } else if (raw.action === "SelectTeam") {
+        console.log(">>> Received SelectTeam message:", raw);
 
         gameState.current.stage = STAGE.SELECT_TEAM;
 
         let teamSize = 2;
-        if (typeof msg.team_size === "number" && msg.team_size > 0) {
-          teamSize = msg.team_size;
+        if (typeof raw.team_size === "number" && raw.team_size > 0) {
+          teamSize = raw.team_size;
         } else {
-          const match = msg.message?.match(/team with (\d+) members?/i);
+          const match = raw.message?.match(/team with (\d+) members?/i);
           if (match) {
             const parsed = Number(match[1]);
             if (!Number.isNaN(parsed) && parsed > 0) {
@@ -375,9 +416,11 @@ export default function App() {
         setIsSelectingTeam(true);
       }
 
-      // 🔧 SIEMPRE guardar el msg completo
+      const msg = enrichTeamMessage(raw);  // 👈 aquí también
+
       setMessages((prev) => [...prev, msg]);
     });
+
 
 
 };
@@ -559,18 +602,7 @@ export default function App() {
               <Text fontSize="0.9rem">Show quests panel</Text>
             </label>
 
-            <label
-              className="avalon-toggle"
-              style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}
-            >
-              <input
-                type="checkbox"
-                checked={useDebugViz}
-                onChange={(e) => setUseDebugViz(e.target.checked)}
-                style={{ transform: "scale(1.1)" }}
-              />
-              <Text fontSize="0.9rem">Use debug VizAvalon</Text>
-            </label>
+
 
           </Flex>
         </Card>

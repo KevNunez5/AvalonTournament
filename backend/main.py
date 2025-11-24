@@ -35,7 +35,15 @@ class GameController:
 
     def broadcast(self, msg, agent_index = -1):
         for player in self.players:
-            player.write_message({"message": msg, "index": agent_index})
+            # Si es un dict, lo mandamos tal cual
+            if isinstance(msg, dict):
+                player.write_message(msg)
+            else:
+                # Comportamiento antiguo para mensajes de texto
+                player.write_message({
+                    "message": msg,
+                    "index": agent_index
+                })
     
     def configure_player(self, index: int, public_state: PublicGameState, roles: list[str]):
         self.players[index + 1].write_message(jsonpickle.encode({
@@ -118,16 +126,31 @@ class GameController:
                 # self.attempt = 1
                 self.start_team_selection()
             elif self.st_state == "TEAM_SELECTION" and event["event"] == "TeamSelected":
-                self.team = event["team"]
+                # normalizamos a enteros por si jsonpickle los manda como str
+                self.team = [int(x) for x in event["team"]]
 
-                proposed_team = Team(self.public_state.player_names, list([i in self.team for i in range(self.nplayers)]))
+                # líder: usamos el index que viene del bot si está
+                leader = int(event["index"]) if "index" in event else self.public_state.leader_index
+
+                # actualizar public_state
+                proposed_team = Team(
+                    self.public_state.player_names,
+                    [i in self.team for i in range(self.nplayers)]
+                )
                 self.public_state.proposed_team = proposed_team
-                
-                # print("... Broadcasting selected team", proposed_team)
-                # self.broadcast(event["message"])
+
+                # 🔹 Ahora sí, broadcast bien formado
+                self.broadcast({
+                    "action": "TeamSelected",
+                    "index": leader,
+                    "team": self.team,
+                    "message": f"Player {leader} proposes the following team [{', '.join(map(str, self.team))}]",
+                })
 
                 self.votes = [None] * (len(self.players) - 1)
                 self.start_team_voting()
+
+            
             elif self.st_state == "TEAM_VOTING" and event["event"] == "TeamVoted":
                 self.broadcast(event["message"], event["index"])
                 index = event["index"]
