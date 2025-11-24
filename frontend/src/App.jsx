@@ -76,6 +76,7 @@ export default function App() {
 
 
   const [role, setRole] = useState("");
+  const [knownEvil, setKnownEvil] = useState([]);
   const [vote, setVote] = useState(null);
 
   const [numHumans, setNumHumans] = useState(1);
@@ -95,6 +96,10 @@ export default function App() {
   const [showAnalytics, setShowAnalytics] = useState(true);
 
   const [debugSelectedTeam, setDebugSelectedTeam] = useState([]);
+
+  // 💡 Cambia esto a false cuando ya no quieras el truco
+  const FORCE_MERLIN_FOR_TEST = true;
+
 
   const debugHistory = [
     {
@@ -123,16 +128,22 @@ export default function App() {
   const [isSelectingTeam, setIsSelectingTeam] = useState(false);
   const [requiredTeamSize, setRequiredTeamSize] = useState(2);
 
-
-
   const [useDebugViz, setUseDebugViz] = useState(false);
 
   useEffect(() => {
     console.log("[App] messages snapshot:", messages);
   }, [messages]);
 
-
-
+// Normaliza el rol a string en minúsculas (por si jsonpickle manda objetos raros)
+function normalizeRole(r) {
+  if (typeof r === "string") {
+    return r.toLowerCase();
+  }
+  if (r && typeof r.name === "string") {
+    return r.name.toLowerCase();
+  }
+  return String(r).toLowerCase();
+}
 
   // ===== Helpers para parsing de mensajes a "history" (Viz-ready) =====
   const vizHistory = useMemo(() => {
@@ -343,7 +354,7 @@ export default function App() {
       const raw = JSON.parse(data);
       console.log("[WS/createNewGame] raw msg:", raw);
 
-      const msg = enrichTeamMessage(raw);   // 👈 aquí usamos el helper
+      const msg = enrichTeamMessage(raw);   // aquí usamos el helper
 
       setMessages((prev) => [...prev, msg]);
     });
@@ -354,55 +365,83 @@ export default function App() {
   // ====== Unirse como jugador ======
   const joinGame = async () => {
     if (wspRef.current) {
-      try { await wspRef.current.close(); } catch {}
+      try {
+        await wspRef.current.close();
+      } catch {}
       wspRef.current = null;
     }
+
     const wsp = new WebSocketAsPromised("ws://localhost:8888/ws");
     await wsp.open();
     wspRef.current = wsp;
 
     wsp.onMessage.addListener((data) => {
+      // 1) Parseamos SIEMPRE primero
       const raw = JSON.parse(data);
       console.log("[WS/joinGame] raw msg:", raw);
 
-      if (raw.action === "RevealRoles") {
+      // 2) Enriquecemos el mensaje (para propuestas de equipo de bots)
+      const msg = enrichTeamMessage(raw);
+
+      // 3) Manejo especial de RevealRoles
+      if (msg.action === "RevealRoles") {
+        const myIndex = msg.index;
+        const allRoles = msg.roles || [];
+        const myRole = allRoles[myIndex];
+
+        // Guardamos en gameState
         gameState.current = {
-          index: raw.index,
-          role: raw.roles[raw.index],
+          index: myIndex,
+          role: myRole,
           stage: STAGE.REVEAL,
         };
-        setRole(gameState.current.role);
 
-        const revealMsg = enrichTeamMessage(raw);  // por consistencia
+        setRole(myRole);
 
+        const myRoleNorm = normalizeRole(myRole);
+
+        // Si soy Merlin, calculo qué jugadores son Evil
+        if (myRoleNorm === "merlin") {
+          const evilIndices = allRoles
+            .map((r, i) => ({ i, r: normalizeRole(r) }))
+            .filter(({ i, r }) => r === "evil" && i !== myIndex)
+            .map(({ i }) => i);
+
+          setKnownEvil(evilIndices);
+        } else {
+          setKnownEvil([]);
+        }
+
+        // Mensajes al chat: el Reveal y el "soy tal rol"
         setMessages((prev) => [
           ...prev,
-          revealMsg,
+          msg,
           {
-            message: `I am Player ${gameState.current.index}, with role '${gameState.current.role}'`,
+            message: `I am Player ${myIndex}, with role '${myRole}'`,
             index: -1,
             action: "LocalInfo",
           },
         ]);
-        return;
+        return; // 👈 importante: no seguimos procesando este msg
       }
 
-      if (raw.action === "VoteTeam") {
+      // 4) Resto de acciones del servidor
+      if (msg.action === "VoteTeam") {
         gameState.current.stage = STAGE.VOTE_TEAM;
         setVote(null);
-      } else if (raw.action === "VoteQuest") {
+      } else if (msg.action === "VoteQuest") {
         gameState.current.stage = STAGE.VOTE_QUEST;
         setVote(null);
-      } else if (raw.action === "SelectTeam") {
-        console.log(">>> Received SelectTeam message:", raw);
+      } else if (msg.action === "SelectTeam") {
+        console.log(">>> Received SelectTeam message:", msg);
 
         gameState.current.stage = STAGE.SELECT_TEAM;
 
         let teamSize = 2;
-        if (typeof raw.team_size === "number" && raw.team_size > 0) {
-          teamSize = raw.team_size;
+        if (typeof msg.team_size === "number" && msg.team_size > 0) {
+          teamSize = msg.team_size;
         } else {
-          const match = raw.message?.match(/team with (\d+) members?/i);
+          const match = msg.message?.match(/team with (\d+) members?/i);
           if (match) {
             const parsed = Number(match[1]);
             if (!Number.isNaN(parsed) && parsed > 0) {
@@ -416,14 +455,12 @@ export default function App() {
         setIsSelectingTeam(true);
       }
 
-      const msg = enrichTeamMessage(raw);  // 👈 aquí también
-
+      // 5) Finalmente, guardamos el mensaje (enriquecido) en el chat
       setMessages((prev) => [...prev, msg]);
     });
+  };
 
 
-
-};
 
   // ====== Enviar acciones ======
   const sendMessage = (message) => {
@@ -579,6 +616,16 @@ export default function App() {
 
             {/* Role visible aquí arriba */}
             <Text>Role: {role}</Text>
+
+            {knownEvil.length > 0 && (
+              <Text fontSize="0.9rem" style={{ marginLeft: "0.75rem" }}>
+                As Merlin you know evil players are:&nbsp;
+                {knownEvil
+                  .map((idx) => playerNames[idx] || `player-${idx}`)
+                  .join(", ")}
+              </Text>
+            )}
+
 
             {/* Checkbox: mostrar/ocultar matriz de votos */}
             <label className="avalon-toggle" style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
