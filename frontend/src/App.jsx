@@ -164,23 +164,29 @@ export default function App() {
 
   // ====== Crear juego (observador) ======
   const createNewGame = async () => {
-    // Si ya hay socket, ciérralo
     if (wspRef.current) {
       try { await wspRef.current.close(); } catch {}
       wspRef.current = null;
     }
 
-    const resp = await fetch("http://localhost:8888/games", { method: "POST" });
-    // abrir WS como observador
+    await fetch("http://localhost:8888/games", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nplayers: numHumans + numBots,
+        nbots: numBots,
+      }),
+    });
+
     const wsp = new WebSocketAsPromised("ws://localhost:8888/ws");
     await wsp.open();
     wspRef.current = wsp;
     wsp.onMessage.addListener((data) => {
       const msg = JSON.parse(data);
-      // Normalizamos siempre a {message, index, action?}
       setMessages((prev) => [...prev, { message: msg.message, index: msg.index, action: msg.action }]);
     });
   };
+
 
   // ====== Unirse como jugador ======
   const joinGame = async () => {

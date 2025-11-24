@@ -211,22 +211,28 @@ class GamesHandler(tornado.web.RequestHandler):
         self.finish()
 
     async def post(self):
-        body = jsonpickle.decode(self.request.body)
+        try:
+            if self.request.body:
+                body = jsonpickle.decode(self.request.body)
+            else:
+                body = {}
+        except Exception as e:
+            print("Could not decode body, using defaults:", e)
+            body = {}
+
+        nplayers = body.get("nplayers", 5)
+        nbots = body.get("nbots", 5)
+
         print("Creating a game instance", body)
-        controller = GameController(5,5)
+        controller = GameController(nplayers, nbots)
         IOLoop.current().spawn_callback(controller.game_loop)
         self.application.add_handlers(
-            r".*",  # match any host
-            [
-                (
-                    r"/ws",
-                    GameWSHandler,
-                    dict(controller=controller)
-                ),
-            ]
+            r".*",
+            [(r"/ws", GameWSHandler, dict(controller=controller))]
         )
         print("Done ..")
-        self.write(f"Done ...")
+        self.write("Done ...")
+
 
 if __name__ == "__main__":
     app = tornado.web.Application([(r"/games", GamesHandler)])
