@@ -75,7 +75,7 @@ function TeamSelector({
                 onChange={() => togglePlayer(index)}
                 style={{ transform: "scale(1.1)" }}
               />
-              <span style={{ fontSize: "0.9rem" }}>{name}</span>
+              <span style={{ fontSize: "0.9rem", color: "white" }}>{name}</span>
             </label>
           );
         })}

@@ -253,6 +253,30 @@ export default function App() {
 
 
 
+  // ===== Historial filtrado: ocultar la ronda actual (incompleta) =====
+  const vizHistoryClosed = useMemo(() => {
+    if (!vizHistory || vizHistory.length === 0) return vizHistory;
+
+    const last = vizHistory[vizHistory.length - 1];
+
+    const hasQuestOutcome =
+      last.quest_vote_outcome === "succeeded" ||
+      last.quest_vote_outcome === "failed";
+
+    const isRejected = last.team_vote_outcome === "failed";
+
+    // Si la última ronda está abierta (sin quest y no fue rechazada),
+    // la ocultamos (nos quedamos con todas menos la última).
+    if (!hasQuestOutcome && !isRejected) {
+      return vizHistory.slice(0, -1);
+    }
+
+    // Si ya está cerrada, usamos todo el historial
+    return vizHistory;
+  }, [vizHistory]);
+
+
+
 
   const wrapperSetVote = (value) => setVote(value);
 
@@ -557,7 +581,7 @@ export default function App() {
 
           {/* VizAvalon */}
           <VizAvalon
-            history={useDebugViz ? debugHistory : vizHistory}
+            history={useDebugViz ? debugHistory : vizHistoryClosed}
             numPlayers={useDebugViz ? 5 : numHumans + numBots}
             playerNames={useDebugViz ? debugPlayerNames : playerNames}
             showVotes={showVotesViz}
