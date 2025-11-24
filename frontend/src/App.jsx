@@ -84,6 +84,10 @@ export default function App() {
     "Medea",
   ];
 
+  const [isSelectingTeam, setIsSelectingTeam] = useState(false);
+  const [requiredTeamSize, setRequiredTeamSize] = useState(2);
+
+
 
   const [useDebugViz, setUseDebugViz] = useState(false);
 
@@ -204,6 +208,7 @@ export default function App() {
         ]);
         return;
       }
+
       if (msg.action === "VoteTeam") {
         gameState.current.stage = STAGE.VOTE_TEAM;
         setVote(null);
@@ -211,12 +216,39 @@ export default function App() {
         gameState.current.stage = STAGE.VOTE_QUEST;
         setVote(null);
       } else if (msg.action === "SelectTeam") {
+        console.log(">>> Received SelectTeam message:", msg);   // 👈 DEBUG
+
         gameState.current.stage = STAGE.SELECT_TEAM;
+
+        // Inferir tamaño de equipo desde el texto
+        let teamSize = 2;
+        const match = msg.message?.match(/team with (\d+) members?/i);
+        if (match) {
+          const parsed = Number(match[1]);
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            teamSize = parsed;
+          }
+        }
+        console.log(">>> inferred teamSize:", teamSize);
+        setRequiredTeamSize(teamSize);
+
+        const isLeader = msg.index === gameState.current.index;
+        console.log(
+          ">>> is leader?",
+          isLeader,
+          "msg.index =",
+          msg.index,
+          "my index =",
+          gameState.current.index
+        );
+
+        setIsSelectingTeam(isLeader);
       }
 
       setMessages((prev) => [...prev, { message: msg.message, index: msg.index, action: msg.action }]);
     });
-  };
+
+};
 
   // ====== Enviar acciones ======
   const sendMessage = (message) => {
@@ -281,6 +313,27 @@ export default function App() {
     }
     return null;
   };
+
+  const handleTeamConfirm = (indices) => {
+    if (!wspRef.current) return;
+
+    // indices son [0,1,3,...] → IDs internos de jugador
+    const team = indices;
+
+    const payload = {
+      index: gameState.current.index,
+      team,
+      event: "TeamSelected",
+      message: `Player ${gameState.current.index} proposes the following team [${team.join(",")}]`,
+    };
+
+    console.log(">>> sending TeamSelected payload:", payload);
+
+    // dejamos que el servidor cambie el stage cuando responda
+    wspRef.current.send(JSON.stringify(payload));
+    setIsSelectingTeam(false);
+  };
+
 
   useEffect(() => {
     return () => {
@@ -404,7 +457,7 @@ export default function App() {
           />
 
 
-          {/* Demo: TeamSelector */}
+          {/* Demo: TeamSelector 
           <div style={{ marginTop: "12px", borderTop: "1px solid #333", paddingTop: "8px" }}>
             <TeamSelector
               playerNames={playerNames}
@@ -416,11 +469,12 @@ export default function App() {
               }}
             />
 
-            {/* Texto de debug para que veas que sí está funcionando */}
+           Texto de debug para que veas que sí está funcionando 
             <Text fontSize="0.8rem" marginTop="0.25rem">
               Debug team: [{debugSelectedTeam.join(", ")}]
             </Text>
           </div>
+          */}
 
           {/* Editor de nombres */}
           <div style={{ marginTop: "8px" }} className="avalon-rename-list">
@@ -475,6 +529,16 @@ export default function App() {
                     />
                   ))}
                   {votingFormIfNeeded()}
+
+                  {isSelectingTeam && (
+                    <TeamSelector
+                      playerNames={playerNames}
+                      numPlayers={totalPlayers}
+                      maxSelected={requiredTeamSize}
+                      onConfirm={handleTeamConfirm}
+                      onCancel={() => setIsSelectingTeam(false)}
+                    />
+                  )}
                 </MessageList>
                 <MessageInput
                   placeholder="Type message here"
