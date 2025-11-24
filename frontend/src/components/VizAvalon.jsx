@@ -17,7 +17,7 @@ export default function VizAvalon({
   rowHeight = 28,
   showVotes = true,
   showQuests = true,
-  playerNames, // 👈 viene desde App
+  playerNames,
 }) {
   // IDs internos: player-0 ... player-(n-1)
   const players = useMemo(
@@ -33,6 +33,12 @@ export default function VizAvalon({
         : players,
     [playerNames, players, numPlayers]
   );
+
+  // ===== LOGS DE DEBUG =====
+  console.log("[VizAvalon] render");
+  console.log("[VizAvalon] numPlayers =", numPlayers);
+  console.log("[VizAvalon] labels =", labels);
+  console.log("[VizAvalon] history =", history);
 
   const getColor = (result) =>
     result === "succeeded" ? "green" : result === "failed" ? "red" : "lightgray";
@@ -65,11 +71,12 @@ export default function VizAvalon({
     <svg
       width={width}
       height={Math.max(360, lowerLabelsYStart + numPlayers * rowHeight)}
+
     >
       {/* ⭐ Nombres (arriba) usando labels */}
       {labels.map((name, idx) => (
         <text
-          key={`name-top-${players[idx]}`} // key estable por ID interno
+          key={`name-top-${players[idx]}`}
           x={leftLabelX}
           y={leftTopY + idx * rowHeight}
           fill="#f1f5f9"

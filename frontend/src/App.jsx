@@ -91,74 +91,168 @@ export default function App() {
 
   const [useDebugViz, setUseDebugViz] = useState(false);
 
+  useEffect(() => {
+    console.log("[App] messages snapshot:", messages);
+  }, [messages]);
+
+
 
 
   // ===== Helpers para parsing de mensajes a "history" (Viz-ready) =====
-  const history = useMemo(() => {
-    // Construye intentos/rondas a partir de los textos que emite el server/bots
+  const vizHistory = useMemo(() => {
     const rounds = [];
     let holder = null;
 
+    // jugadores internos tipo "player-0"... basados en el estado actual
+    const totalPlayers = numHumans + numBots;
+    const allPlayers = Array.from(
+      { length: totalPlayers },
+      (_, i) => `player-${i}`
+    );
+
     const pushHolder = () => {
-      if (holder) {
-        rounds.push(holder);
-        holder = null;
+      if (!holder) return;
+
+      // Si nunca logramos inferir el team, usamos todos los jugadores
+      if (!holder.team || holder.team.length === 0) {
+        holder.team = [...allPlayers];
       }
+
+      rounds.push(holder);
+      holder = null;
     };
 
     for (const m of messages) {
-      const text = m.message;
+      const text = m?.message || "";
+      if (!text) continue;
 
-      // Propuesta de equipo
-      // "Player i proposes the following team [a,b]"
-      const prop = text?.match(/^Player (\d+) proposes the following team \[([0-9, ]*)\]/);
+      console.log("[vizParser] processing:", text, "action:", m.action, "index:", m.index);
+
+      // 1) Intento de detectar propuesta de equipo (por si el backend sigue mandándola)
+      //    "Player i proposes the following team [a,b]"
+      const prop = text.match(/Player\s+(\d+)\s+proposes.*\[(.+)\]/i);
       if (prop) {
-        const leader = `player-${prop[1]}`;
-        const team = prop[2]
+        const leaderIdx = Number(prop[1]);
+        const rawTeam = prop[2];
+
+        const team = rawTeam
           .split(",")
-          .filter(Boolean)
-          .map((s) => `player-${Number(s.trim())}`);
-        holder = { leader, team, votes: [] };
+          .map((s) => s.trim())
+          .filter((s) => s !== "")
+          .map((s) => `player-${Number(s)}`);
+
+        console.log("[vizParser] NEW ROUND (from proposal) leader =", leaderIdx, "team =", team);
+
+        // cerramos ronda previa (si existe)
+        pushHolder();
+
+        holder = {
+          leader: `player-${leaderIdx}`,
+          team,
+          votes: [],
+          team_vote_outcome: undefined,
+          quest_vote_outcome: undefined,
+        };
         continue;
       }
 
-      // Votos al equipo
-      // "Player j voted 'True' on team"
-      const vteam = text?.match(/^Player (\d+) voted '(\w+)' on team/);
-      if (vteam && holder) {
-        const player = `player-${vteam[1]}`;
-        const v = vteam[2].toLowerCase() === "true" ? "yes" : "no";
-        holder.votes = [...(holder.votes || []).filter((x) => x.player !== player), { player, vote: v }];
+      // 2) Si el backend mandara team/leader como campos estructurados
+      //    (por ejemplo en algún mensaje con action === "TeamSelected")
+      if (!holder && Array.isArray(m.team)) {
+        const leaderIdx = typeof m.leader === "number" ? m.leader : null;
+        const team = m.team.map((idx) => `player-${idx}`);
+
+        console.log("[vizParser] NEW ROUND (from structured msg) leader =", leaderIdx, "team =", team);
+
+        pushHolder();
+
+        holder = {
+          leader: leaderIdx !== null ? `player-${leaderIdx}` : null,
+          team,
+          votes: [],
+          team_vote_outcome: undefined,
+          quest_vote_outcome: undefined,
+        };
+        // seguimos procesando el mismo texto por si además matchea otros patrones
+      }
+
+      // 3) Votos al equipo
+      //    Ej: "Player 0 voted 'True' on team"
+      //        "Player 4 voted 'yes' on team"
+      const vteam = text.match(
+        /^Player\s+(\d+)\s+voted\s+'?(\w+)'?\s*(?:on\s+team)?/i
+      );
+      if (vteam) {
+        // si aún no hay holder, empezamos una ronda solo con base en los votos
+        if (!holder) {
+          console.log("[vizParser] starting holder from team vote");
+          holder = {
+            leader: null,
+            team: [],
+            votes: [],
+            team_vote_outcome: undefined,
+            quest_vote_outcome: undefined,
+          };
+        }
+
+        const playerIdx = Number(vteam[1]);
+        const voteRaw = vteam[2];
+
+        const player = `player-${playerIdx}`;
+        const isYes = /^(true|yes|y|1)$/i.test(String(voteRaw));
+
+        const filtered = (holder.votes || []).filter((v) => v.player !== player);
+        holder.votes = [
+          ...filtered,
+          { player, vote: isYes ? "yes" : "no" },
+        ];
+
+        console.log("[vizParser] VOTE", player, "=", isYes ? "yes" : "no");
         continue;
       }
 
-      // Resultado de equipo aceptado
+      // 4) Equipo aceptado
       if (text === "Team accepted!" && holder) {
         holder.team_vote_outcome = "succeeded";
-        // no push aún, esperamos "Quest result"
+        console.log("[vizParser] TEAM ACCEPTED");
         continue;
       }
 
-      // Resultado de misión
-      // "Quest result True/False"
-      const q = text?.match(/^Quest result (True|False)/);
+      // 5) Resultado de misión: "Quest result True/False"
+      const q = text.match(/Quest result\s+(True|False)/i);
       if (q && holder) {
-        holder.quest_vote_outcome = q[1] === "True" ? "succeeded" : "failed";
+        const ok = q[1].toLowerCase() === "true";
+        holder.quest_vote_outcome = ok ? "succeeded" : "failed";
+        console.log(
+          "[vizParser] QUEST RESULT =",
+          ok ? "succeeded" : "failed"
+        );
+        // fin de ronda
         pushHolder();
         continue;
       }
 
-      // Inferir equipo rechazado cuando vuelve "Asked Player X to select a team"
-      if (text?.startsWith("Asked Player") && text?.includes("to select a team")) {
+      // 6) Rechazo de equipo inferido
+      if (text.startsWith("Asked Player") && text.includes("to select a team")) {
         if (holder && !holder.team_vote_outcome) {
           holder.team_vote_outcome = "failed";
+          console.log("[vizParser] TEAM REJECTED (inferred)");
           pushHolder();
         }
+        continue;
       }
     }
 
+    // Cerrar última ronda si quedó abierta
+    pushHolder();
+
+    console.log("[App] vizHistory length =", rounds.length, rounds);
     return rounds;
-  }, [messages]);
+  }, [messages, numHumans, numBots]);
+
+
+
+
 
   const wrapperSetVote = (value) => setVote(value);
 
@@ -186,11 +280,10 @@ export default function App() {
 
     wsp.onMessage.addListener((data) => {
       const msg = JSON.parse(data);
-      setMessages((prev) => [
-        ...prev,
-        { message: msg.message, index: msg.index, action: msg.action }
-      ]);
+      // 🔧 guardamos TODO el objeto que manda el backend
+      setMessages((prev) => [...prev, msg]);
     });
+
   };
 
 
@@ -215,9 +308,16 @@ export default function App() {
           stage: STAGE.REVEAL,
         };
         setRole(gameState.current.role);
+
+        // Guardamos el mensaje original del backend
         setMessages((prev) => [
           ...prev,
-          { message: `I am Player ${gameState.current.index}, with role '${gameState.current.role}'`, index: -1 }
+          msg,
+          {
+            message: `I am Player ${gameState.current.index}, with role '${gameState.current.role}'`,
+            index: -1,
+            action: "LocalInfo",
+          },
         ]);
         return;
       }
@@ -233,12 +333,10 @@ export default function App() {
 
         gameState.current.stage = STAGE.SELECT_TEAM;
 
-        // Preferir el team_size que viene del backend
         let teamSize = 2;
         if (typeof msg.team_size === "number" && msg.team_size > 0) {
           teamSize = msg.team_size;
         } else {
-          // fallback usando el texto, por si acaso
           const match = msg.message?.match(/team with (\d+) members?/i);
           if (match) {
             const parsed = Number(match[1]);
@@ -250,14 +348,13 @@ export default function App() {
 
         console.log(">>> final teamSize:", teamSize);
         setRequiredTeamSize(teamSize);
-
-        // ignoramos msg.index porque viene -1 (narrador)
         setIsSelectingTeam(true);
       }
 
-
-      setMessages((prev) => [...prev, { message: msg.message, index: msg.index, action: msg.action }]);
+      // 🔧 SIEMPRE guardar el msg completo
+      setMessages((prev) => [...prev, msg]);
     });
+
 
 };
 
@@ -460,12 +557,13 @@ export default function App() {
 
           {/* VizAvalon */}
           <VizAvalon
-            history={useDebugViz ? debugHistory : history}
+            history={useDebugViz ? debugHistory : vizHistory}
             numPlayers={useDebugViz ? 5 : numHumans + numBots}
             playerNames={useDebugViz ? debugPlayerNames : playerNames}
             showVotes={showVotesViz}
             showQuests={showQuestsViz}
           />
+
 
 
           {/* Demo: TeamSelector 
