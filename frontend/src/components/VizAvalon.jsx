@@ -41,7 +41,7 @@ export default function VizAvalon({
   console.log("[VizAvalon] history =", history);
 
   const getColor = (result) =>
-    result === "succeeded" ? "green" : result === "failed" ? "red" : "lightgray";
+    result === "succeeded" ? "GreenYellow" : result === "failed" ? "#F53020" : "lightgray";
 
   // Dimensiones y offsets
   const leftLabelX = 50;
@@ -146,7 +146,7 @@ export default function VizAvalon({
                     height={numPlayers * rowHeight - 4}
                     rx="1%"
                     fill={getColor(round.quest_vote_outcome)}
-                    fillOpacity="0.4"
+                    fillOpacity="0.5"
                   />
                   {round.team_vote_outcome === "failed" ? (
                     <line

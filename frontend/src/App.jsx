@@ -11,6 +11,7 @@ import QuestBoard from "./components/QuestBoard";
 import "./components/mystyles.css";
 import TeamSelector from "./components/TeamSelector";
 
+const HOST_NAME = "10.50.124.62"; // Alternatively, localhost
 
 const STAGE = {
   REVEAL: "RevealingRoles",
@@ -337,7 +338,7 @@ function normalizeRole(r) {
 
     const totalPlayers = numHumans + numBots;
 
-    const resp = await fetch("http://localhost:8888/games", {
+    const resp = await fetch(`http://${HOST_NAME}:8888/games`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -346,7 +347,7 @@ function normalizeRole(r) {
       }),
     });
 
-    const wsp = new WebSocketAsPromised("ws://localhost:8888/ws");
+    const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888/ws`);
     await wsp.open();
     wspRef.current = wsp;
 
@@ -371,7 +372,7 @@ function normalizeRole(r) {
       wspRef.current = null;
     }
 
-    const wsp = new WebSocketAsPromised("ws://localhost:8888/ws");
+    const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888/ws`);
     await wsp.open();
     wspRef.current = wsp;
 
