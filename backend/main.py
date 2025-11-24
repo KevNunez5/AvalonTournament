@@ -2,6 +2,8 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 import jsonpickle
+import sys
+
 
 import subprocess
 
@@ -20,7 +22,8 @@ class GameController:
         self.players = list()
         self.nplayers = nplayers
         self.nbots = nbots
-        subprocess.Popen(["python3", "bots.py", str(nbots)])
+        subprocess.Popen([sys.executable, "bots.py", str(nbots)])
+
     
     def add_player(self, channel):
         player_id = len(self.players)
@@ -205,33 +208,41 @@ class GameWSHandler(tornado.websocket.WebSocketHandler):
 
 class GamesHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
+        # Origen
         self.set_header("Access-Control-Allow-Origin", "*")
+        # Qué headers acepta en las peticiones
+        self.set_header("Access-Control-Allow-Headers", "Content-Type")
+        # Qué métodos acepta
+        self.set_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+
     def options(self):
         self.set_status(204)
         self.finish()
 
     async def post(self):
-        try:
-            if self.request.body:
-                body = jsonpickle.decode(self.request.body)
-            else:
-                body = {}
-        except Exception as e:
-            print("Could not decode body, using defaults:", e)
+        if self.request.body:
+            body = jsonpickle.decode(self.request.body)
+        else:
             body = {}
 
-        nplayers = body.get("nplayers", 5)
-        nbots = body.get("nbots", 5)
+        # 👇 lee del body, con default 5/5
+        nplayers = int(body.get("nplayers", 5))
+        nbots    = int(body.get("nbots", 5))
 
-        print("Creating a game instance", body)
+        print("Creating a game instance with:", nplayers, "players and", nbots, "bots")
+
         controller = GameController(nplayers, nbots)
         IOLoop.current().spawn_callback(controller.game_loop)
+
         self.application.add_handlers(
             r".*",
-            [(r"/ws", GameWSHandler, dict(controller=controller))]
+            [
+                (r"/ws", GameWSHandler, dict(controller=controller)),
+            ]
         )
-        print("Done ..")
+
         self.write("Done ...")
+
 
 
 if __name__ == "__main__":

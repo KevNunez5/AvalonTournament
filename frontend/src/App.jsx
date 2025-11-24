@@ -169,23 +169,30 @@ export default function App() {
       wspRef.current = null;
     }
 
-    await fetch("http://localhost:8888/games", {
+    const totalPlayers = numHumans + numBots;
+
+    const resp = await fetch("http://localhost:8888/games", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        nplayers: numHumans + numBots,
-        nbots: numBots,
+        nplayers: totalPlayers, // 👈 humanos + bots
+        nbots: numBots          // 👈 solo los bots
       }),
     });
 
     const wsp = new WebSocketAsPromised("ws://localhost:8888/ws");
     await wsp.open();
     wspRef.current = wsp;
+
     wsp.onMessage.addListener((data) => {
       const msg = JSON.parse(data);
-      setMessages((prev) => [...prev, { message: msg.message, index: msg.index, action: msg.action }]);
+      setMessages((prev) => [
+        ...prev,
+        { message: msg.message, index: msg.index, action: msg.action }
+      ]);
     });
   };
+
 
 
   // ====== Unirse como jugador ======
