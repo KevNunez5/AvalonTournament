@@ -216,34 +216,32 @@ export default function App() {
         gameState.current.stage = STAGE.VOTE_QUEST;
         setVote(null);
       } else if (msg.action === "SelectTeam") {
-        console.log(">>> Received SelectTeam message:", msg);   // 👈 DEBUG
+        console.log(">>> Received SelectTeam message:", msg);
 
         gameState.current.stage = STAGE.SELECT_TEAM;
 
-        // Inferir tamaño de equipo desde el texto
+        // Preferir el team_size que viene del backend
         let teamSize = 2;
-        const match = msg.message?.match(/team with (\d+) members?/i);
-        if (match) {
-          const parsed = Number(match[1]);
-          if (!Number.isNaN(parsed) && parsed > 0) {
-            teamSize = parsed;
+        if (typeof msg.team_size === "number" && msg.team_size > 0) {
+          teamSize = msg.team_size;
+        } else {
+          // fallback usando el texto, por si acaso
+          const match = msg.message?.match(/team with (\d+) members?/i);
+          if (match) {
+            const parsed = Number(match[1]);
+            if (!Number.isNaN(parsed) && parsed > 0) {
+              teamSize = parsed;
+            }
           }
         }
-        console.log(">>> inferred teamSize:", teamSize);
+
+        console.log(">>> final teamSize:", teamSize);
         setRequiredTeamSize(teamSize);
 
-        const isLeader = msg.index === gameState.current.index;
-        console.log(
-          ">>> is leader?",
-          isLeader,
-          "msg.index =",
-          msg.index,
-          "my index =",
-          gameState.current.index
-        );
-
-        setIsSelectingTeam(isLeader);
+        // ignoramos msg.index porque viene -1 (narrador)
+        setIsSelectingTeam(true);
       }
+
 
       setMessages((prev) => [...prev, { message: msg.message, index: msg.index, action: msg.action }]);
     });
