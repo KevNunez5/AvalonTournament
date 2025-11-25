@@ -17,34 +17,93 @@ from avalon.team import Team
 
 from tornado.ioloop import IOLoop
 from tornado.queues import Queue
+from pathlib import Path
+from datetime import datetime
+import time
+
 
 class GameController:
+    
     def __init__(self, nplayers, nbots, url):
         self.q = Queue(maxsize=2)
         self.players = list()
         self.nplayers = nplayers
         self.nbots = nbots
+
+        # ================================
+        #   LOGGING POR PARTIDA
+        # ================================
+        game_id = url.rsplit("/", 1)[-1].strip("/")
+        logs_dir = Path("logs")
+        logs_dir.mkdir(exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.log_path = logs_dir / f"avalon-log-{game_id}-{timestamp}.txt"
+
+        # Header inicial
+        with self.log_path.open("a", encoding="utf-8") as f:
+            f.write(f"Avalon Game Log\n")
+            f.write(f"Game ID: {game_id}\n")
+            f.write(f"Created: {datetime.now().isoformat()}\n")
+            f.write(f"Players={nplayers}, Bots={nbots}\n\n")
+
         subprocess.Popen([sys.executable, "bots.py", str(nbots), f"{url}"])
+        
+    def log_event(self, source: str, payload):
+        """
+        source: 'client_message', 'server_broadcast', 'system', etc.
+        payload: dict o string
+        """
+        record = {
+            "ts": time.time(),
+            "source": source,
+        }
+
+        if isinstance(payload, dict):
+            record.update(payload)
+        else:
+            record["message"] = str(payload)
+
+        line = jsonpickle.encode(record)
+
+        with self.log_path.open("a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
     
     def add_player(self, channel):
         player_id = len(self.players)
         self.players.append(channel)
+
+        self.log_event("system", {
+            "event": "player_connected",
+            "player_id": player_id,
+            "remote": str(channel.request.remote_ip)
+        })
+
         print("Number of players so far:", f"{len(self.players)}")
         channel.write_message({"message": f"Welcome player {player_id - 1}", "index": -1})
+
         if len(self.players) == self.nplayers + 1:
             self.q.put({"event": "AllPlayers"})
 
-    def broadcast(self, msg, agent_index = -1):
+
+    def broadcast(self, msg, agent_index=-1):
+
+        # Loguear mensaje antes de enviarlo
+        self.log_event("server_broadcast", {
+            "agent_index": agent_index,
+            "payload": msg
+        })
+
         for player in self.players:
-            # Si es un dict, lo mandamos tal cual
             if isinstance(msg, dict):
                 player.write_message(msg)
             else:
-                # Comportamiento antiguo para mensajes de texto
                 player.write_message({
                     "message": msg,
                     "index": agent_index
                 })
+
     
     def configure_player(self, index: int, public_state: PublicGameState, roles: list[str]):
         self.players[index + 1].write_message(jsonpickle.encode({
@@ -223,9 +282,19 @@ class GameWSHandler(tornado.websocket.WebSocketHandler):
 
     async def on_message(self, message_str: str):
         print(f"Message received from {self.request.remote_ip}: processing...")
-        print("\t",message_str)
-        # self.write_message({"message": message_str})
-        self.controller.q.put(jsonpickle.decode(message_str))
+        print("\t", message_str)
+
+        event = jsonpickle.decode(message_str)
+
+        # Log entrada del cliente
+        self.controller.log_event("client_message", {
+            "remote_ip": self.request.remote_ip,
+            "raw": message_str,
+            "event": event
+        })
+
+        self.controller.q.put(event)
+
 
     def check_origin(self, origin):
         return True
