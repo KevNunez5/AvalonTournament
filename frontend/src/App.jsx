@@ -11,7 +11,7 @@ import QuestBoard from "./components/QuestBoard";
 import "./components/mystyles.css";
 import TeamSelector from "./components/TeamSelector";
 
-const HOST_NAME = "10.50.68.252"; // Alternatively, localhost
+const HOST_NAME = "10.50.68.252"; // Alternatively, localhost o 10.50.68.252
 
 const STAGE = {
   REVEAL: "RevealingRoles",
@@ -105,6 +105,20 @@ export default function App() {
   const [wsPath, setWsPath] = useState(null);     // e.g. "/ws/Hs2x3Y"
   const [gameIdInput, setGameIdInput] = useState(""); // texto del input
 
+  const [availableGames, setAvailableGames] = useState([]); // lista de "/ws/<id>"
+
+  // ====== Cargar lista de juegos activos desde el backend ======
+  const refreshGames = async () => {
+    try {
+      const resp = await fetch(`http://${HOST_NAME}:8888/games`);
+      const data = await resp.json(); // esperamos algo como ["/ws/abc", "/ws/xyz"]
+      console.log("[refreshGames] games:", data);
+      setAvailableGames(data || []);
+    } catch (err) {
+      console.error("[refreshGames] error:", err);
+    }
+  };
+
 
   const debugHistory = [
     {
@@ -138,6 +152,10 @@ export default function App() {
   useEffect(() => {
     console.log("[App] messages snapshot:", messages);
   }, [messages]);
+
+  useEffect(() => {
+    refreshGames();
+  }, []);
 
 // Normaliza el rol a string en minúsculas (por si jsonpickle manda objetos raros)
 function normalizeRole(r) {
@@ -362,6 +380,10 @@ function normalizeRole(r) {
     setWsPath(location);
     setGameIdInput(gameId);   // para que el host vea el código y pueda compartirlo
 
+    // Opcional: refrescar la lista de partidas disponibles
+    refreshGames();
+
+
     // 2) Conectar como observador/host a ESA sala específica
     const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888${location}`);
     await wsp.open();
@@ -379,21 +401,19 @@ function normalizeRole(r) {
 
 
   // ====== Unirse como jugador a una sala específica ======
-  const joinGame = async () => {
-    // Validar que haya un Game Id escrito
-    const trimmedId = gameIdInput.trim();
+  const joinGame = async (gameIdOverride) => {
+    // Si nos pasan un ID directo (por botón), usamos ese; si no, usamos el input
+    const rawId = gameIdOverride != null ? gameIdOverride : gameIdInput;
+    const trimmedId = String(rawId).trim();
+
     if (!trimmedId) {
       console.error("[joinGame] No game id provided");
       return;
     }
 
-    // Construimos la ruta WS igual que la que creó el backend
     const location = `/ws/${trimmedId}`;
-
-    // Guardamos la ruta en estado (opcional pero útil)
     setWsPath(location);
 
-    // Cerramos conexión anterior si existe
     if (wspRef.current) {
       try {
         await wspRef.current.close();
@@ -401,7 +421,6 @@ function normalizeRole(r) {
       wspRef.current = null;
     }
 
-    // Abrimos el WS hacia esa sala
     const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888${location}`);
     await wsp.open();
     wspRef.current = wsp;
@@ -659,18 +678,54 @@ function normalizeRole(r) {
         </Card>
 
         <Card columnStart="3" columnEnd="-1" className="avalon-card avalon-controls-card">
-          <Flex direction="row" gap="0.75rem" alignItems="center">
+          <Flex direction="row" gap="0.75rem" alignItems="center" wrap="wrap">
 
+            {/* Input manual por si alguien quiere escribir el código */}
             <Input
               placeholder="Game Id"
               value={gameIdInput}
               onChange={(e) => setGameIdInput(e.target.value)}
             />
 
-            <Button onClick={joinGame} className="avalon-primary-button">
+            <Button onClick={() => joinGame()} className="avalon-primary-button">
               Join
             </Button>
 
+            {/* Recargar la lista de partidas activas */}
+            <Button onClick={refreshGames} className="avalon-primary-button">
+              Refresh games
+            </Button>
+
+            {/* Dropdown con las partidas disponibles */}
+            <select
+              value={gameIdInput}
+              onChange={(e) => {
+                const id = e.target.value;
+                setGameIdInput(id);     // rellena el input
+                // si quisieras auto-unirse al seleccionar, podrías hacer: joinGame(id);
+              }}
+              style={{
+                padding: "0.4rem 0.8rem",
+                borderRadius: "999px",
+                border: "1px solid #444",
+                backgroundColor: "#111827",
+                color: "white",
+                minWidth: "180px",
+              }}
+            >
+              <option value="">Select game…</option>
+              {availableGames.map((path, index) => {
+                const id = path.split("/").pop(); // "/ws/abc123" -> "abc123"
+                const label = `Game ${index + 1}`; // Game 1, Game 2, ...
+
+                return (
+                  <option key={path} value={id}>
+                    {label}
+                  </option>
+                );
+              })}
+
+            </select>
 
             {/* Role visible aquí arriba */}
             <Text>Role: {role}</Text>
@@ -684,33 +739,9 @@ function normalizeRole(r) {
               </Text>
             )}
 
-
-            {/* Checkbox: mostrar/ocultar matriz de votos */}
-            <label className="avalon-toggle" style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-              <input
-                type="checkbox"
-                checked={showVotesViz}
-                onChange={(e) => setShowVotesViz(e.target.checked)}
-                style={{ transform: "scale(1.1)" }}   // opcional, solo para que se vea más grande
-              />
-              <Text fontSize="0.9rem">Show votes grid</Text>
-            </label>
-
-            {/* Checkbox: mostrar/ocultar panel de quests */}
-            <label className="avalon-toggle" style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-              <input
-                type="checkbox"
-                checked={showQuestsViz}
-                onChange={(e) => setShowQuestsViz(e.target.checked)}
-                style={{ transform: "scale(1.1)" }}
-              />
-              <Text fontSize="0.9rem">Show quests panel</Text>
-            </label>
-
-
-
           </Flex>
         </Card>
+
 
 
         {/* ===== Fila 2: contenido izquierda (Viz + renames + QuestBoard) ===== */}
