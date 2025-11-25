@@ -11,7 +11,7 @@ import QuestBoard from "./components/QuestBoard";
 import "./components/mystyles.css";
 import TeamSelector from "./components/TeamSelector";
 
-const HOST_NAME = "10.50.124.62"; // Alternatively, localhost
+const HOST_NAME = "10.50.68.252"; // Alternatively, localhost
 
 const STAGE = {
   REVEAL: "RevealingRoles",
@@ -101,6 +101,9 @@ export default function App() {
 
   // 💡 Cambia esto a false cuando ya no quieras el truco
   const FORCE_MERLIN_FOR_TEST = false;
+
+  const [wsPath, setWsPath] = useState(null);     // e.g. "/ws/Hs2x3Y"
+  const [gameIdInput, setGameIdInput] = useState(""); // texto del input
 
 
   const debugHistory = [
@@ -329,9 +332,9 @@ function normalizeRole(r) {
 
   const wrapperSetVote = (value) => setVote(value);
 
-  // ====== Crear juego (observador) ======
-  // ====== Crear juego (observador) ======
+  // ====== Crear juego (observador / host) ======
   const createNewGame = async () => {
+    // Cerramos WS previo si hubiera
     if (wspRef.current) {
       try { await wspRef.current.close(); } catch {}
       wspRef.current = null;
@@ -339,16 +342,28 @@ function normalizeRole(r) {
 
     const totalPlayers = numHumans + numBots;
 
+    // 1) Crear juego en el backend
     const resp = await fetch(`http://${HOST_NAME}:8888/games`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nplayers: totalPlayers,
-        nbots: numBots
+        nbots: numBots,
       }),
     });
 
-    const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888/ws`);
+    const data = await resp.json(); // { location: "/ws/<gameid>" }
+    console.log("[createNewGame] backend response:", data);
+
+    const location = data.location;        // "/ws/Hs2x3Y..."
+    const gameId = location.split("/").pop(); // "Hs2x3Y..."
+
+    // Guardamos en estado
+    setWsPath(location);
+    setGameIdInput(gameId);   // para que el host vea el código y pueda compartirlo
+
+    // 2) Conectar como observador/host a ESA sala específica
+    const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888${location}`);
     await wsp.open();
     wspRef.current = wsp;
 
@@ -356,16 +371,29 @@ function normalizeRole(r) {
       const raw = JSON.parse(data);
       console.log("[WS/createNewGame] raw msg:", raw);
 
-      const msg = enrichTeamMessage(raw);   // aquí usamos el helper
+      const msg = enrichTeamMessage(raw);
 
       setMessages((prev) => [...prev, msg]);
     });
   };
 
 
-
-  // ====== Unirse como jugador ======
+  // ====== Unirse como jugador a una sala específica ======
   const joinGame = async () => {
+    // Validar que haya un Game Id escrito
+    const trimmedId = gameIdInput.trim();
+    if (!trimmedId) {
+      console.error("[joinGame] No game id provided");
+      return;
+    }
+
+    // Construimos la ruta WS igual que la que creó el backend
+    const location = `/ws/${trimmedId}`;
+
+    // Guardamos la ruta en estado (opcional pero útil)
+    setWsPath(location);
+
+    // Cerramos conexión anterior si existe
     if (wspRef.current) {
       try {
         await wspRef.current.close();
@@ -373,7 +401,8 @@ function normalizeRole(r) {
       wspRef.current = null;
     }
 
-    const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888/ws`);
+    // Abrimos el WS hacia esa sala
+    const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888${location}`);
     await wsp.open();
     wspRef.current = wsp;
 
@@ -402,7 +431,6 @@ function normalizeRole(r) {
 
         const myRoleNorm = normalizeRole(myRole);
 
-        // calculamos evilIndices (si aplica)
         let evilIndices = [];
 
         if (myRoleNorm === "merlin") {
@@ -417,11 +445,10 @@ function normalizeRole(r) {
           setKnownEvil([]);
         }
 
-        // armamos los mensajes que se verán en el chat
         setMessages((prev) => {
           const next = [
             ...prev,
-            msg, // el RevealRoles original (si quieres verlo)
+            msg,
             {
               message: `I am Player ${myIndex}, with role '${myRole}'`,
               index: -1,
@@ -429,7 +456,6 @@ function normalizeRole(r) {
             },
           ];
 
-          // Si soy Merlin y tengo info de malos, agrego la burbuja extra
           if (myRoleNorm === "merlin" && evilIndices.length > 0) {
             const evilNames = evilIndices
               .map((idx) => playerNames[idx] || `player-${idx}`)
@@ -478,10 +504,11 @@ function normalizeRole(r) {
         setIsSelectingTeam(true);
       }
 
-      // 5) Finalmente, guardamos el mensaje (enriquecido) en el chat
+      // 5) Guardar mensaje en el chat
       setMessages((prev) => [...prev, msg]);
     });
   };
+
 
 
 
@@ -634,8 +661,16 @@ function normalizeRole(r) {
         <Card columnStart="3" columnEnd="-1" className="avalon-card avalon-controls-card">
           <Flex direction="row" gap="0.75rem" alignItems="center">
 
-            <Input placeholder="Game Id" />
-            <Button onClick={joinGame} className="avalon-primary-button">Join</Button>
+            <Input
+              placeholder="Game Id"
+              value={gameIdInput}
+              onChange={(e) => setGameIdInput(e.target.value)}
+            />
+
+            <Button onClick={joinGame} className="avalon-primary-button">
+              Join
+            </Button>
+
 
             {/* Role visible aquí arriba */}
             <Text>Role: {role}</Text>
