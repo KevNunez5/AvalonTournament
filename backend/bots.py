@@ -6,8 +6,9 @@ from avalon.utils import get_team_string
 import sys
 import traceback
 
-async def avalon_bot(loop: asyncio.AbstractEventLoop):
-    uri = "ws://localhost:8888/ws"
+async def avalon_bot(loop: asyncio.AbstractEventLoop, ur):
+    uri = "ws://localhost:8888" + url
+    print(uri)
     try:
         async with websockets.connect(
             uri,
@@ -95,12 +96,13 @@ async def avalon_bot(loop: asyncio.AbstractEventLoop):
         loop.stop()
 
 if __name__ == "__main__":
-    if (len(sys.argv) != 2):
+    if (len(sys.argv) < 2):
         raise("You forgot to specify the number of bots")
     nbots = int(sys.argv[1])
+    url = sys.argv[2]
     # nbots = 5
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     for i in range(nbots):
-        asyncio.ensure_future(avalon_bot(loop))
+        asyncio.ensure_future(avalon_bot(loop, url))
     loop.run_forever()

@@ -1,0 +1,11 @@
+####
+post http://localhost:8888/games HTTP/1.1
+content-type: application/json
+
+{
+    "nplayers": 10,
+    "nbots": 5
+}
+
+####
+get http://localhost:8888/games HTTP/1.1

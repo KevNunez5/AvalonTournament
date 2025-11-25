@@ -4,6 +4,8 @@ import tornado.websocket
 import jsonpickle
 import sys
 
+import shortuuid
+import regex as re
 
 import subprocess
 
@@ -17,13 +19,12 @@ from tornado.ioloop import IOLoop
 from tornado.queues import Queue
 
 class GameController:
-    def __init__(self, nplayers, nbots):
+    def __init__(self, nplayers, nbots, url):
         self.q = Queue(maxsize=2)
         self.players = list()
         self.nplayers = nplayers
         self.nbots = nbots
-        subprocess.Popen([sys.executable, "bots.py", str(nbots)])
-
+        subprocess.Popen([sys.executable, "bots.py", str(nbots), f"{url}"])
     
     def add_player(self, channel):
         player_id = len(self.players)
@@ -230,6 +231,7 @@ class GameWSHandler(tornado.websocket.WebSocketHandler):
         return True
 
 class GamesHandler(tornado.web.RequestHandler):
+    urls = []
     def set_default_headers(self):
         # Origen
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -242,29 +244,37 @@ class GamesHandler(tornado.web.RequestHandler):
         self.set_status(204)
         self.finish()
 
+    async def get(self):
+        self.write(jsonpickle.dumps(self.urls))
+
     async def post(self):
         if self.request.body:
             body = jsonpickle.decode(self.request.body)
         else:
             body = {}
 
+        gameid = shortuuid.uuid()
+        url = f"/ws/{gameid}"
+        print(url)
+        self.urls.append(url)
         # 👇 lee del body, con default 5/5
-        nplayers = int(body.get("nplayers", 5))
-        nbots    = int(body.get("nbots", 5))
-
+        nplayers = int(body.get("nplayers", 1))
+        nbots    = int(body.get("nbots", 4))
+        
         print("Creating a game instance with:", nplayers, "players and", nbots, "bots")
 
-        controller = GameController(nplayers, nbots)
+        controller = GameController(nplayers, nbots, url)
         IOLoop.current().spawn_callback(controller.game_loop)
 
         self.application.add_handlers(
             r".*",
             [
-                (r"/ws", GameWSHandler, dict(controller=controller)),
+                (re.escape(url), GameWSHandler, dict(controller=controller)),
             ]
         )
 
-        self.write("Done ...")
+        self.set_header("Content-Type", "application/json")
+        self.write(jsonpickle.dumps({"location": url}))
 
 
 

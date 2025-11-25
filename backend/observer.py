@@ -2,11 +2,12 @@ import asyncio
 import websockets
 import requests
 import jsonpickle
+import time
 
 async def avalon_observer(loop):
-    r = requests.post("http://localhost:8888/games", data={"nplayers": 10, "nbots": 10})
-
-    uri = "ws://localhost:8888/ws"
+    r = requests.post("http://localhost:8888/games", json={"nplayers": 10, "nbots": 10})
+    print(r.json())
+    uri = f"ws://localhost:8888{r.json()['location']}"
     try:
         async with websockets.connect(
             uri,
