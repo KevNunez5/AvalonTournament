@@ -11,7 +11,7 @@ import QuestBoard from "./components/QuestBoard";
 import "./components/mystyles.css";
 import TeamSelector from "./components/TeamSelector";
 
-const HOST_NAME = "10.50.68.252"; // Alternatively, localhost o 10.50.68.252
+const HOST_NAME = "localhost"; // Alternatively, localhost o 10.50.68.252
 
 const STAGE = {
   REVEAL: "RevealingRoles",
@@ -95,10 +95,6 @@ export default function App() {
   const wspRef = useRef(null);
   const gameState = useRef({ index: undefined, role: undefined, stage: undefined });
 
-  const [showAnalytics, setShowAnalytics] = useState(true);
-
-  const [debugSelectedTeam, setDebugSelectedTeam] = useState([]);
-
   // 💡 Cambia esto a false cuando ya no quieras el truco
   const FORCE_MERLIN_FOR_TEST = false;
 
@@ -106,6 +102,11 @@ export default function App() {
   const [gameIdInput, setGameIdInput] = useState(""); // texto del input
 
   const [availableGames, setAvailableGames] = useState([]); // lista de "/ws/<id>"
+
+  // Evitar que el usuario haga Join más de una vez por carga de página
+  const [hasJoinedOnce, setHasJoinedOnce] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
 
   // ====== Cargar lista de juegos activos desde el backend ======
   const refreshGames = async () => {
@@ -401,43 +402,52 @@ function normalizeRole(r) {
 
 
   // ====== Unirse como jugador a una sala específica ======
-  const joinGame = async (gameIdOverride) => {
-    // Si nos pasan un ID directo (por botón), usamos ese; si no, usamos el input
-    const rawId = gameIdOverride != null ? gameIdOverride : gameIdInput;
-    const trimmedId = String(rawId).trim();
+const joinGame = async (gameIdOverride) => {
+  // 🧱 Protección: si ya hizo join una vez en esta carga, ignoramos
+  if (hasJoinedOnce) {
+    console.warn("[joinGame] already joined once, ignoring extra click");
+    return;
+  }
 
-    if (!trimmedId) {
-      console.error("[joinGame] No game id provided");
-      return;
-    }
+  const rawId = gameIdOverride != null ? gameIdOverride : gameIdInput;
+  const trimmedId = String(rawId).trim();
 
-    const location = `/ws/${trimmedId}`;
-    setWsPath(location);
+  if (!trimmedId) {
+    console.error("[joinGame] No game id provided");
+    return;
+  }
 
-    if (wspRef.current) {
-      try {
-        await wspRef.current.close();
-      } catch {}
-      wspRef.current = null;
-    }
+  const location = `/ws/${trimmedId}`;
+  setWsPath(location);
+
+  // Cerrar conexión previa si existiera
+  if (wspRef.current) {
+    try {
+      await wspRef.current.close();
+    } catch {}
+    wspRef.current = null;
+  }
+
+  try {
+    setIsJoining(true); // empezamos intento de conexión
 
     const wsp = new WebSocketAsPromised(`ws://${HOST_NAME}:8888${location}`);
     await wsp.open();
     wspRef.current = wsp;
 
+    // ✅ Sólo si la conexión fue exitosa marcamos que ya se unió una vez
+    setHasJoinedOnce(true);
+    setIsJoining(false);
+
     wsp.onMessage.addListener((data) => {
-      // 1) Parseamos SIEMPRE primero
       const raw = JSON.parse(data);
       console.log("[WS/joinGame] raw msg:", raw);
 
-      // 2) Enriquecemos el mensaje (para propuestas de equipo de bots)
       const msg = enrichTeamMessage(raw);
 
-      // 3) Manejo especial de RevealRoles
       if (msg.action === "RevealRoles") {
         const myIndex = msg.index;
         const allRoles = msg.roles || [];
-
         const myRole = allRoles[myIndex];
 
         gameState.current = {
@@ -493,7 +503,6 @@ function normalizeRole(r) {
         return;
       }
 
-      // 4) Resto de acciones del servidor
       if (msg.action === "VoteTeam") {
         gameState.current.stage = STAGE.VOTE_TEAM;
         setVote(null);
@@ -523,12 +532,14 @@ function normalizeRole(r) {
         setIsSelectingTeam(true);
       }
 
-      // 5) Guardar mensaje en el chat
       setMessages((prev) => [...prev, msg]);
     });
-  };
-
-
+  } catch (err) {
+    console.error("[joinGame] error opening websocket:", err);
+    setIsJoining(false);
+    // No marcamos hasJoinedOnce para que pueda reintentar si falló
+  }
+};
 
 
   // ====== Enviar acciones ======
@@ -687,9 +698,14 @@ function normalizeRole(r) {
               onChange={(e) => setGameIdInput(e.target.value)}
             />
 
-            <Button onClick={() => joinGame()} className="avalon-primary-button">
-              Join
+            <Button
+              onClick={() => joinGame()}
+              className="avalon-primary-button"
+              disabled={hasJoinedOnce || isJoining}
+            >
+              {hasJoinedOnce ? "Joined" : (isJoining ? "Joining..." : "Join")}
             </Button>
+
 
             {/* Recargar la lista de partidas activas */}
             <Button onClick={refreshGames} className="avalon-primary-button">
