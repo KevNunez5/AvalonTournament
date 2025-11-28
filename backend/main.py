@@ -223,8 +223,9 @@ class GameController:
                         self.broadcast("Team accepted!")
                         self.start_quest()
                     else:
-                        self.attempt += 1
-                        self.team_leader = (self.team_leader + 1) % (len(self.players) - 1)
+                        # Usamos siempre el estado público
+                        self.public_state.attempt += 1
+                        self.public_state.leader_index = (self.public_state.leader_index + 1) % (len(self.players) - 1)
                         self.start_team_selection()
             elif self.st_state == "ON_QUEST" and event["event"] == "QuestVoted":
                 self.broadcast(event["message"])
@@ -248,16 +249,18 @@ class GameController:
                         else:
                             self.broadcast("Starting round " + str(self.round))
 
-                            # Determine the team size for the current round.
-                            #TODO: this assumes there are 5 players.
-                            if self.round == 1 or self.round == 3:
-                                self.team_size = 2
-                            else:
-                                self.team_size = 3
+                            # Actualiza el tamaño de equipo en el estado público
+                            self.public_state.team_size = avalon_rules.get_team_size(
+                                self.round,
+                                self.public_state.num_players
+                            )
 
+                            # Nuevo líder y se reinician intentos en el estado público
                             self.public_state.leader_index = (self.public_state.leader_index + 1) % (len(self.players) - 1)
-                            self.attempt = 1
+                            self.public_state.attempt = 1
+
                             self.start_team_selection()
+
                     elif self.public_state.get_winning_team() == good:
                         self.broadcast("Goods are winning ... Let 'assasin' try to identify Merlin")
                         self.start_expose_merlin()
